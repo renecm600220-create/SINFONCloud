@@ -46,7 +46,7 @@ const $=id=>document.getElementById(id);
 async function loadModel(){
 try{
 ort.env.wasm.numThreads=navigator.hardwareConcurrency||2;
-session=await ort.InferenceSession.create("u2netp.onnx",{executionProviders:["wasm"],graphOptimizationLevel:"all"});
+session=await ort.InferenceSession.create("https://cdn.jsdelivr.net/gh/renecm600220-create/SINFONCloud@main/docs/u2netp.onnx",{executionProviders:["wasm"],graphOptimizationLevel:"all"});
 $("status").textContent="Selecciona una foto";
 $("btnRun").disabled=false;
 }catch(e){$("status").textContent="Error: "+e.message;}
