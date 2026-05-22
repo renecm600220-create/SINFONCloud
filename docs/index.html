@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>SINFON</title>
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.0/dist/ort.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a1a;color:#fff;font-family:system-ui;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:16px}
+h1{font-size:32px;color:#00d4ff;letter-spacing:8px;margin:12px 0 4px}
+.sub{font-size:12px;color:#555;margin-bottom:20px}
+.preview{width:100%;max-width:380px;aspect-ratio:1;background:#111;border-radius:16px;overflow:hidden;display:flex;align-items:center;justify-content:center;border:1px solid #222}
+.preview img{max-width:100%;max-height:100%;object-fit:contain}
+.status{color:#888;font-size:13px;margin:14px 0;text-align:center;min-height:20px}
+.buttons{display:flex;gap:12px;margin-top:8px}
+.btn{padding:14px 28px;border:none;border-radius:12px;font-size:15px;font-weight:600;color:#fff;cursor:pointer}
+.btn-gal{background:#1a1a2e}.btn-run{background:#00d4ff;color:#000}.btn-new{background:#1a3a1a}
+.btn:disabled{background:#111;color:#333}
+.spinner{display:none;width:28px;height:28px;border:3px solid #222;border-top-color:#00d4ff;border-radius:50%;animation:spin .7s linear infinite;margin:6px auto}
+.spinner.show{display:block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<h1>SINFON</h1>
+<div class="sub">IA sin conexion</div>
+<div class="preview" id="preview"><span style="color:#333">Sin imagen</span></div>
+<div class="status" id="status">Cargando modelo...</div>
+<div class="spinner" id="spinner"></div>
+<div class="buttons">
+<button class="btn btn-gal" id="btnPick">Galeria</button>
+<button class="btn btn-run" id="btnRun" disabled>Quitar Fondo</button>
+</div>
+<div class="buttons" style="margin-top:10px">
+<button class="btn btn-new hidden" id="btnNew">Nueva imagen</button>
+</div>
+<input type="file" id="fileInput" accept="image/*" style="display:none">
+<script>
+const MODEL_SIZE=320;
+let session=null;
+let currentFile=null;
+const $=id=>document.getElementById(id);
+
+async function loadModel(){
+try{
+ort.env.wasm.numThreads=navigator.hardwareConcurrency||2;
+session=await ort.InferenceSession.create("u2netp.onnx",{executionProviders:["wasm"],graphOptimizationLevel:"all"});
+$("status").textContent="Selecciona una foto";
+$("btnRun").disabled=false;
+}catch(e){$("status").textContent="Error: "+e.message;}
+}
+loadModel();
+
+$("btnPick").onclick=()=>$("fileInput").click();
+$("fileInput").onchange=e=>{
+const file=e.target.files[0];
+if(!file)return;
+currentFile=file;
+const r=new FileReader();
+r.onload=ev=>{
+$("preview").innerHTML="";
+const img=document.createElement("img");
+img.src=ev.target.result;
+$("preview").appendChild(img);
+$("status").textContent="Lista";
+$("btnNew").classList.add("hidden");
+};
+r.readAsDataURL(file);
+};
+
+$("btnRun").onclick=async()=>{
+if(!currentFile)return;
+$("btnRun").disabled=true;
+$("btnPick").disabled=true;
+$("spinner").classList.add("show");
+try{
+const t0=Date.now();
+$("status").textContent="Cargando imagen...";
+const imgData=await new Promise((res,rej)=>{
+const r=new FileReader();
+r.onload=ev=>{
+const img=new Image();
+img.onload=()=>{
+const c=document.createElement("canvas");
+c.width=MODEL_SIZE;c.height=MODEL_SIZE;
+const ctx=c.getContext("2d");
+ctx.drawImage(img,0,0,MODEL_SIZE,MODEL_SIZE);
+res({pixels:ctx.getImageData(0,0,MODEL_SIZE,MODEL_SIZE).data,origImg:img,ow:img.naturalWidth,oh:img.naturalHeight});
+};
+img.onerror=rej;
+img.src=ev.target.result;
+};
+r.readAsDataURL(currentFile);
+});
+$("status").textContent="IA procesando...";
+const hw=MODEL_SIZE*MODEL_SIZE;
+const tensor=new Float32Array(3*hw);
+for(let i=0;i<hw;i++){
+tensor[i]=imgData.pixels[i*4]/255;
+tensor[hw+i]=imgData.pixels[i*4+1]/255;
+tensor[2*hw+i]=imgData.pixels[i*4+2]/255;
+}
+const inputT=new ort.Tensor("float32",tensor,[1,3,MODEL_SIZE,MODEL_SIZE]);
+const feeds={};
+feeds[session.inputNames[0]]=inputT;
+const results=await session.run(feeds);
+let output;
+for(const n of session.outputNames){output=results[n];if(output.dims.length>=3)break;}
+const mask=output.data;
+const dm=output.dims;
+const mh=dm[dm.length-2],mw=dm[dm.length-1];
+$("status").textContent="Generando...";
+const maskCanvas=document.createElement("canvas");
+maskCanvas.width=mw;maskCanvas.height=mh;
+const mctx=maskCanvas.getContext("2d");
+const maskImg=mctx.createImageData(mw,mh);
+for(let i=0;i<mw*mh;i++){
+maskImg.data[i*4]=maskImg.data[i*4+1]=maskImg.data[i*4+2]=255;
+maskImg.data[i*4+3]=Math.round(mask[i]*255);
+}
+mctx.putImageData(maskImg,0,0);
+const ratio=Math.min(1024/imgData.ow,1024/imgData.oh,1);
+const rw=Math.round(imgData.ow*ratio);
+const rh=Math.round(imgData.oh*ratio);
+const resultCanvas=document.createElement("canvas");
+resultCanvas.width=rw;resultCanvas.height=rh;
+const rctx=resultCanvas.getContext("2d");
+rctx.drawImage(imgData.origImg,0,0,rw,rh);
+rctx.globalCompositeOperation="destination-in";
+rctx.drawImage(maskCanvas,0,0,rw,rh);
+rctx.globalCompositeOperation="source-over";
+$("preview").innerHTML="";
+const rImg=document.createElement("img");
+rImg.src=resultCanvas.toDataURL("image/png");
+$("preview").appendChild(rImg);
+const secs=((Date.now()-t0)/1000).toFixed(1);
+$("status").textContent="Listo en "+secs+"s";
+$("btnNew").classList.remove("hidden");
+}catch(e){
+console.error(e);
+$("status").textContent="Error: "+e.message;
+}finally{
+$("btnRun").disabled=false;
+$("btnPick").disabled=false;
+$("spinner").classList.remove("show");
+}
+};
+
+$("btnNew").onclick=()=>{
+$("preview").innerHTML="<span style=\"color:#333\">Sin imagen</span>";
+currentFile=null;
+$("status").textContent="Selecciona una foto";
+$("btnNew").classList.add("hidden");
+$("fileInput").value="";
+};
+</script>
+</body>
+</html>
