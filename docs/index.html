@@ -38,8 +38,9 @@ h1 span{color:var(--accent)}
 .d-btns{display:flex;gap:12px;justify-content:center;margin-top:12px;flex-wrap:wrap}
 .d-btn{padding:14px 28px;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;font-family:'Source Serif 4',serif}
 .d-gal{background:#1a1a2e;color:#fff}
-.d-run{background:var(--accent);color:#000;box-shadow:0 0 15px rgba(0,212,255,.4)}
-.d-run:active{transform:scale(.95)}
+.d-run-off{background:#222;color:#444;cursor:not-allowed}
+.d-run-on{background:var(--accent);color:#000;box-shadow:0 0 15px rgba(0,212,255,.4);animation:btnpulse 1.5s ease-in-out infinite}
+@keyframes btnpulse{from{box-shadow:0 0 10px rgba(0,212,255,.3)}to{box-shadow:0 0 25px rgba(0,212,255,.6)}}
 .d-save{background:var(--gold);color:#000}
 .d-new{background:#1a3a1a;color:#fff}
 .spinner{display:none;width:28px;height:28px;border:3px solid #222;border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin:6px auto}
@@ -57,7 +58,6 @@ footer{text-align:center;padding:40px 20px;color:var(--muted);font-size:12px;bor
 .instructions h3{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;color:var(--accent);margin-bottom:12px}
 .instructions ol{text-align:left;display:inline-block;font-size:14px;color:var(--muted)}
 .instructions li{margin:8px 0}
-.step-highlight{background:rgba(0,212,255,.1);border-radius:8px;padding:8px 16px;border:1px solid rgba(0,212,255,.2)}
 </style>
 </head>
 <body>
@@ -103,18 +103,18 @@ footer{text-align:center;padding:40px 20px;color:var(--muted);font-size:12px;bor
 <ol>
 <li>Toca <strong>"Seleccionar Foto"</strong></li>
 <li>Elige una foto de tu galeria</li>
-<li>Toca <strong class="step-highlight">"Quitar Fondo"</strong></li>
+<li>Toca <strong>"Quitar Fondo"</strong> cuando se encienda</li>
 <li>Espera unos segundos</li>
 <li>Toca <strong>"Guardar"</strong> para descargar</li>
 </ol>
 </div>
 <div class="demo-app">
 <div class="preview" id="preview"><span style="color:#333">Sin imagen</span></div>
-<div class="status" id="status">Selecciona una foto para empezar</div>
+<div class="status" id="status">Cargando IA...</div>
 <div class="spinner" id="spinner"></div>
 <div class="d-btns">
 <button class="d-btn d-gal" id="btnPick">Seleccionar Foto</button>
-<button class="d-btn d-run" id="btnRun" style="opacity:0.4">Quitar Fondo</button>
+<button class="d-btn d-run-off" id="btnRun">Quitar Fondo</button>
 </div>
 <div class="d-btns hidden" id="resultBtns">
 <button class="d-btn d-save" id="btnSave">Guardar</button>
@@ -140,33 +140,30 @@ Tus fotos nunca salen de tu computadora
 </footer>
 
 <script>
-const MODEL_SIZE=320;
-let session=null;
-let modelReady=false;
-let modelLoading=false;
-let currentFile=null;
-let resultUrl=null;
-const $=id=>document.getElementById(id);
+var MODEL_SIZE=320;
+var session=null;
+var modelReady=false;
+var photoReady=false;
+var currentFile=null;
+var resultUrl=null;
+var $=function(id){return document.getElementById(id)};
 
-function activateRunBtn(){
+function updateRunBtn(){
   var btn=$("btnRun");
-  btn.style.opacity="1";
-  btn.style.animation="btnpulse 1.5s ease-in-out infinite";
-  btn.style.boxShadow="0 0 15px rgba(0,212,255,.4)";
-}
-
-function deactivateRunBtn(){
-  var btn=$("btnRun");
-  btn.style.opacity="0.4";
-  btn.style.animation="none";
-  btn.style.boxShadow="none";
+  if(photoReady && modelReady){
+    btn.className="d-btn d-run-on";
+    btn.onclick=doRemove;
+  } else {
+    btn.className="d-btn d-run-off";
+    btn.onclick=function(){
+      if(!modelReady) $("status").textContent="Espera, cargando IA...";
+      else if(!photoReady) $("status").textContent="Selecciona una foto primero";
+    };
+  }
 }
 
 function loadModel(){
-  if(modelReady||modelLoading)return;
-  modelLoading=true;
   $("status").textContent="Cargando IA...";
-
   var s=document.createElement("script");
   s.src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.0/dist/ort.min.js";
   s.onload=function(){
@@ -174,29 +171,30 @@ function loadModel(){
     ort.InferenceSession.create("https://cdn.jsdelivr.net/gh/renecm600220-create/SINFONCloud@main/docs/u2netp.onnx",{
       executionProviders:["wasm"],
       graphOptimizationLevel:"all"
-    }).then(function(s){
-      session=s;
+    }).then(function(sess){
+      session=sess;
       modelReady=true;
-      $("status").textContent="Selecciona una foto";
-      console.log("Modelo cargado OK");
+      console.log("Modelo OK");
+      if(photoReady){
+        $("status").textContent="Foto lista - Toca Quitar Fondo";
+        updateRunBtn();
+      } else {
+        $("status").textContent="IA lista - Selecciona una foto";
+      }
     }).catch(function(e){
-      console.error("Error modelo:",e);
-      $("status").textContent="Error cargando IA: "+e.message;
-      modelLoading=false;
+      console.error(e);
+      $("status").textContent="Error IA: "+e.message;
     });
   };
   s.onerror=function(){
-    $("status").textContent="Error cargando IA - recarga la pagina";
-    modelLoading=false;
+    $("status").textContent="Error cargando IA";
   };
   document.head.appendChild(s);
 }
 
 loadModel();
 
-$("btnPick").onclick=function(){
-  $("fileInput").click();
-};
+$("btnPick").onclick=function(){$("fileInput").click()};
 
 $("fileInput").onchange=function(e){
   var file=e.target.files[0];
@@ -210,36 +208,35 @@ $("fileInput").onchange=function(e){
     img.src=ev.target.result;
     $("preview").appendChild(img);
     $("resultBtns").classList.add("hidden");
-    activateRunBtn();
+    photoReady=true;
     if(modelReady){
       $("status").textContent="Foto lista - Toca Quitar Fondo";
     } else {
-      $("status").textContent="Foto lista - IA cargando, espera...";
+      $("status").textContent="Foto lista - Esperando IA...";
       var check=setInterval(function(){
         if(modelReady){
           $("status").textContent="Foto lista - Toca Quitar Fondo";
+          updateRunBtn();
           clearInterval(check);
         }
       },500);
     }
+    updateRunBtn();
   };
   r.readAsDataURL(file);
 };
 
-$("btnRun").onclick=function(){
-  if(!currentFile)return;
-  if(!modelReady){
-    $("status").textContent="Espera a que cargue la IA...";
-    return;
-  }
-  $("btnRun").style.opacity="0.4";
-  $("btnRun").style.animation="none";
+function doRemove(){
+  if(!currentFile||!modelReady)return;
+  var btn=$("btnRun");
+  btn.className="d-btn d-run-off";
+  btn.onclick=null;
   $("btnPick").style.opacity="0.4";
   $("spinner").classList.add("show");
   $("resultBtns").classList.add("hidden");
 
   var t0=Date.now();
-  $("status").textContent="Cargando imagen...";
+  $("status").textContent="Procesando imagen...";
 
   var r=new FileReader();
   r.onload=function(ev){
@@ -311,29 +308,34 @@ $("btnRun").onclick=function(){
             $("status").textContent="Listo en "+secs+"s";
             $("resultBtns").classList.remove("hidden");
             $("spinner").classList.remove("show");
-            activateRunBtn();
             $("btnPick").style.opacity="1";
+            updateRunBtn();
           }).catch(function(e){
             console.error(e);
             $("status").textContent="Error: "+e.message;
             $("spinner").classList.remove("show");
-            activateRunBtn();
             $("btnPick").style.opacity="1";
+            updateRunBtn();
           });
         }catch(e){
           console.error(e);
           $("status").textContent="Error: "+e.message;
           $("spinner").classList.remove("show");
-          activateRunBtn();
           $("btnPick").style.opacity="1";
+          updateRunBtn();
         }
       },100);
     };
-    img.onerror=function(){$("status").textContent="Error cargando imagen";$("spinner").classList.remove("show");activateRunBtn();$("btnPick").style.opacity="1";};
+    img.onerror=function(){
+      $("status").textContent="Error cargando imagen";
+      $("spinner").classList.remove("show");
+      $("btnPick").style.opacity="1";
+      updateRunBtn();
+    };
     img.src=ev.target.result;
   };
   r.readAsDataURL(currentFile);
-};
+}
 
 $("btnSave").onclick=function(){
   if(!resultUrl)return;
@@ -349,15 +351,13 @@ $("btnNew").onclick=function(){
   $("preview").innerHTML="<span style=\"color:#333\">Sin imagen</span>";
   currentFile=null;
   resultUrl=null;
-  $("status").textContent="Selecciona una foto";
+  photoReady=false;
+  if(modelReady) $("status").textContent="IA lista - Selecciona una foto";
+  else $("status").textContent="Cargando IA...";
   $("resultBtns").classList.add("hidden");
-  deactivateRunBtn();
   $("fileInput").value="";
+  updateRunBtn();
 };
-
-var style=document.createElement("style");
-style.textContent="@keyframes btnpulse{from{box-shadow:0 0 10px rgba(0,212,255,.3)}to{box-shadow:0 0 25px rgba(0,212,255,.6)}}";
-document.head.appendChild(style);
 </script>
 </body>
 </html>
