@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>SINFON - Quitar Fondo con IA</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a1a;color:#fff;font-family:system-ui,-apple-system,sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:16px}
+h1{font-size:32px;color:#00d4ff;letter-spacing:8px;margin:12px 0 4px}
+.sub{font-size:12px;color:#555;margin-bottom:20px}
+.preview{width:100%;max-width:380px;aspect-ratio:1;background:#111;border-radius:16px;overflow:hidden;display:flex;align-items:center;justify-content:center;border:1px solid #222}
+.preview img{max-width:100%;max-height:100%;object-fit:contain}
+.status{color:#888;font-size:13px;margin:14px 0;text-align:center;min-height:20px}
+.buttons{display:flex;gap:12px;margin-top:8px}
+.btn{padding:14px 28px;border:none;border-radius:12px;font-size:15px;font-weight:600;color:#fff;cursor:pointer;transition:all .2s}
+.btn-gal{background:#1a1a2e}.btn-gal:hover{background:#2a2a3e}
+.btn-run{background:#00d4ff;color:#000}.btn-run:hover{background:#00e5ff}
+.btn-new{background:#1a3a1a}.btn-new:hover{background:#2a5a2a}
+.btn:disabled{background:#111;color:#333;cursor:default}
+.spinner{display:none;width:28px;height:28px;border:3px solid #222;border-top-color:#00d4ff;border-radius:50%;animation:spin .7s linear infinite;margin:6px auto}
+.spinner.show{display:block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.hidden{display:none}
+.credit{margin-top:auto;padding:20px;font-size:11px;color:#333}
+</style>
+</head>
+<body>
+<h1>SINFON</h1>
+<div class="sub">IA sin conexion</div>
+<div class="preview" id="preview"><span style="color:#333;font-size:14px">Sin imagen</span></div>
+<div class="status" id="status">Selecciona una foto</div>
+<div class="spinner" id="spinner"></div>
+<div class="buttons">
+  <button class="btn btn-gal" id="btnPick">Galeria</button>
+  <button class="btn btn-run" id="btnRun">Quitar Fondo</button>
+</div>
+<div class="buttons" style="margin-top:10px">
+  <button class="btn btn-new hidden" id="btnNew">Nueva imagen</button>
+</div>
+<input type="file" id="fileInput" accept="image/*" style="display:none">
+<div class="credit">SINFON - Tecnologia avanzada de IA</div>
+<script>
+let currentFile = null;
+const $ = id => document.getElementById(id);
+
+$('btnPick').onclick = () => $('fileInput').click();
+$('fileInput').onchange = e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  currentFile = file;
+  const r = new FileReader();
+  r.onload = ev => {
+    $('preview').innerHTML = '';
+    const img = document.createElement('img');
+    img.src = ev.target.result;
+    $('preview').appendChild(img);
+    $('status').textContent = 'Lista - Presiona Quitar Fondo';
+    $('btnNew').classList.add('hidden');
+  };
+  r.readAsDataURL(file);
+};
+
+$('btnRun').onclick = async () => {
+  if (!currentFile) { $('status').textContent = 'Selecciona una foto primero'; return; }
+  $('btnRun').disabled = true;
+  $('btnPick').disabled = true;
+  $('spinner').classList.add('show');
+  try {
+    const t0 = Date.now();
+    $('status').textContent = 'Enviando...';
+
+    const res = await fetch('/remove', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/octet-stream'},
+      body: currentFile
+    });
+
+    if (!res.ok) throw new Error(await res.text());
+
+    $('status').textContent = 'Mostrando resultado...';
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+
+    $('preview').innerHTML = '';
+    const img = document.createElement('img');
+    img.src = url;
+    $('preview').appendChild(img);
+
+    const secs = ((Date.now() - t0) / 1000).toFixed(1);
+    $('status').textContent = 'Listo en ' + secs + 's';
+    $('btnNew').classList.remove('hidden');
+  } catch(e) {
+    console.error(e);
+    $('status').textContent = 'Error: ' + e.message;
+  } finally {
+    $('btnRun').disabled = false;
+    $('btnPick').disabled = false;
+    $('spinner').classList.remove('show');
+  }
+};
+
+$('btnNew').onclick = () => {
+  $('preview').innerHTML = '<span style="color:#333;font-size:14px">Sin imagen</span>';
+  currentFile = null;
+  $('status').textContent = 'Selecciona una foto';
+  $('btnNew').classList.add('hidden');
+  $('fileInput').value = '';
+};
+</script>
+</body>
+</html>
