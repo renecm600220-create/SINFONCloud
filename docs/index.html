@@ -3,43 +3,126 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-<title>SINFON</title>
-<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.0/dist/ort.min.js"></script>
+<title>SINFON - Quitar Fondo con IA sin Conexion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Source+Serif+4:wght@400;600&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#0a0a1a;color:#fff;font-family:system-ui;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:16px}
-h1{font-size:32px;color:#00d4ff;letter-spacing:8px;margin:12px 0 4px}
-.sub{font-size:12px;color:#555;margin-bottom:20px}
-.preview{width:100%;max-width:380px;aspect-ratio:1;background:#111;border-radius:16px;overflow:hidden;display:flex;align-items:center;justify-content:center;border:1px solid #222}
+:root{--bg:#08080c;--surface:#111118;--accent:#00d4ff;--gold:#e8c547;--text:#f0ece4;--muted:#6a6560}
+body{background:var(--bg);color:var(--text);font-family:'Source Serif 4',Georgia,serif;line-height:1.6}
+.hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px 20px;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(ellipse at 30% 40%,#001a2e 0%,transparent 50%),radial-gradient(ellipse at 70% 60%,#0a0020 0%,transparent 50%);animation:pulse 8s ease-in-out infinite alternate}
+@keyframes pulse{from{opacity:.6}to{opacity:1}}
+h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(48px,10vw,96px);letter-spacing:12px;color:var(--text);position:relative;z-index:1}
+h1 span{color:var(--accent)}
+.tagline{font-size:clamp(16px,3vw,24px);color:var(--muted);margin:12px 0 8px;position:relative;z-index:1}
+.badge{display:inline-block;background:var(--gold);color:#000;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:4px;padding:8px 24px;border-radius:4px;margin:20px 0;position:relative;z-index:1}
+.features{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:24px;max-width:900px;margin:40px auto;padding:0 20px}
+.feature{background:var(--surface);border:1px solid #1a1a24;border-radius:16px;padding:32px;text-align:center}
+.feature-icon{font-size:32px;margin-bottom:12px}
+.feature h3{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:3px;color:var(--accent);margin-bottom:8px}
+.feature p{font-size:14px;color:var(--muted)}
+.section-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(32px,6vw,56px);letter-spacing:8px;text-align:center;color:var(--text);margin:60px 0 10px}
+.section-sub{font-size:14px;color:var(--muted);text-align:center;margin-bottom:40px}
+.cta{background:var(--surface);border-radius:24px;padding:48px 32px;max-width:500px;margin:40px auto;text-align:center}
+.cta h2{font-family:'Bebas Neue',sans-serif;font-size:42px;letter-spacing:4px;color:var(--text)}
+.cta .price{font-size:56px;color:var(--accent);font-family:'Bebas Neue',sans-serif;margin:12px 0}
+.cta .price small{font-size:20px;color:var(--muted)}
+.cta .old-price{text-decoration:line-through;color:var(--muted);font-size:18px}
+.buy-btn{display:inline-block;background:var(--accent);color:#000;font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:4px;padding:16px 48px;border-radius:12px;text-decoration:none;margin-top:20px;transition:all .3s}
+.buy-btn:hover{transform:scale(1.05);box-shadow:0 0 30px rgba(0,212,255,.3)}
+.demo{max-width:600px;margin:60px auto;padding:0 20px}
+.demo-app{background:var(--surface);border-radius:20px;padding:24px;border:1px solid #1a1a24}
+.preview{width:100%;aspect-ratio:1;max-width:400px;background:#0a0a12;border-radius:16px;overflow:hidden;display:flex;align-items:center;justify-content:center;margin:0 auto}
 .preview img{max-width:100%;max-height:100%;object-fit:contain}
-.status{color:#888;font-size:13px;margin:14px 0;text-align:center;min-height:20px}
-.buttons{display:flex;gap:12px;margin-top:8px;flex-wrap:wrap;justify-content:center}
-.btn{padding:14px 28px;border:none;border-radius:12px;font-size:15px;font-weight:600;color:#fff;cursor:pointer}
-.btn-gal{background:#1a1a2e}.btn-run{background:#00d4ff;color:#000}.btn-new{background:#1a3a1a}.btn-save{background:#e8c547;color:#000}
-.btn:disabled{background:#111;color:#333}
-.spinner{display:none;width:28px;height:28px;border:3px solid #222;border-top-color:#00d4ff;border-radius:50%;animation:spin .7s linear infinite;margin:6px auto}
+.status{color:var(--muted);font-size:13px;text-align:center;margin:14px 0;min-height:20px}
+.d-btns{display:flex;gap:12px;justify-content:center;margin-top:12px;flex-wrap:wrap}
+.d-btn{padding:14px 28px;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;font-family:'Source Serif 4',serif}
+.d-gal{background:#1a1a2e;color:#fff}.d-run{background:var(--accent);color:#000}.d-save{background:var(--gold);color:#000}.d-new{background:#1a3a1a;color:#fff}
+.d-btn:disabled{background:#111;color:#333}
+.spinner{display:none;width:28px;height:28px;border:3px solid #222;border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin:6px auto}
 .spinner.show{display:block}
 @keyframes spin{to{transform:rotate(360deg)}}
 .hidden{display:none}
-.credit{margin-top:auto;padding:20px;font-size:11px;color:#333}
+.comparison{max-width:700px;margin:40px auto;padding:0 20px}
+.comp-table{width:100%;border-collapse:collapse}
+.comp-table th,.comp-table td{padding:14px;text-align:center;border-bottom:1px solid #1a1a24;font-size:14px}
+.comp-table th{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:2px;color:var(--accent)}
+.comp-table td:first-child{text-align:left;font-weight:600}
+.check{color:#4ade80}.cross{color:#ef4444}
+footer{text-align:center;padding:40px 20px;color:var(--muted);font-size:12px;border-top:1px solid #1a1a24;margin-top:60px}
 </style>
 </head>
 <body>
-<h1>SINFON</h1>
-<div class="sub">IA sin conexion</div>
+
+<section class="hero">
+<h1>SIN<span>FON</span></h1>
+<div class="tagline">IA sin conexion a internet</div>
+<div class="badge">PAGO UNICO - SIN SUSCRIPCION</div>
+</section>
+
+<div class="features">
+<div class="feature">
+<div class="feature-icon">🔒</div>
+<h3>100% SIN INTERNET</h3>
+<p>Toda la IA corre en tu PC. Sin servidores, sin suscripciones, sin que tus fotos salgan de tu computadora.</p>
+</div>
+<div class="feature">
+<div class="feature-icon">⚡</div>
+<h3>RESULTADOS EN SEGUNDOS</h3>
+<p>Tecnologia avanzada InSPyReNet que elimina fondos en 5-10 segundos con calidad profesional.</p>
+</div>
+<div class="feature">
+<div class="feature-icon">💰</div>
+<h3>PAGO UNICO</h3>
+<p>$4.99 USD. Una sola vez. Para siempre. Sin costos ocultos ni renovaciones.</p>
+</div>
+</div>
+
+<div class="comparison">
+<h2 class="section-title">COMPARACION</h2>
+<table class="comp-table">
+<tr><th></th><th>SINFON</th><th>remove.bg</th><th>Canva Pro</th></tr>
+<tr><td>Sin internet</td><td class="check">✓</td><td class="cross">✗</td><td class="cross">✗</td></tr>
+<tr><td>Pago unico</td><td class="check">$4.99</td><td class="cross">$0.20/foto</td><td class="cross">$12.99/mes</td></tr>
+<tr><td>Privacidad total</td><td class="check">✓</td><td class="cross">✗</td><td class="cross">✗</td></tr>
+<tr><td>Sin limite de fotos</td><td class="check">✓</td><td class="cross">✗</td><td class="cross">✓</td></tr>
+<tr><td>Calidad profesional</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td></tr>
+</table>
+</div>
+
+<section class="demo">
+<h2 class="section-title">PRUEBA GRATIS</h2>
+<p class="section-sub">Selecciona una foto y compruebalo tu mismo</p>
+<div class="demo-app">
 <div class="preview" id="preview"><span style="color:#333">Sin imagen</span></div>
 <div class="status" id="status">Cargando modelo...</div>
 <div class="spinner" id="spinner"></div>
-<div class="buttons">
-<button class="btn btn-gal" id="btnPick">Galeria</button>
-<button class="btn btn-run" id="btnRun" disabled>Quitar Fondo</button>
+<div class="d-btns">
+<button class="d-btn d-gal" id="btnPick">Galeria</button>
+<button class="d-btn d-run" id="btnRun" disabled>Quitar Fondo</button>
 </div>
-<div class="buttons hidden" id="resultBtns">
-<button class="btn btn-save" id="btnSave">Guardar</button>
-<button class="btn btn-new" id="btnNew">Nueva imagen</button>
+<div class="d-btns hidden" id="resultBtns">
+<button class="d-btn d-save" id="btnSave">Guardar</button>
+<button class="d-btn d-new" id="btnNew">Nueva imagen</button>
 </div>
 <input type="file" id="fileInput" accept="image/*" style="display:none">
-<div class="credit">SINFON - Tecnologia avanzada de IA</div>
+</div>
+</section>
+
+<div class="cta">
+<h2>SINFON</h2>
+<p style="color:var(--muted)">IA sin conexion a internet</p>
+<div class="price">$4.99 USD <small>/ pago unico</small></div>
+<p style="font-size:13px;color:var(--muted)">Descarga instantanea • Windows • Sin suscripcion</p>
+<a href="#" class="buy-btn" id="buyBtn">COMPRAR AHORA</a>
+</div>
+
+<footer>
+SINFON - Tecnologia avanzada de IA<br>
+Tus fotos nunca salen de tu computadora
+</footer>
+
 <script>
 const MODEL_SIZE=320;
 let session=null;
@@ -51,7 +134,7 @@ async function loadModel(){
 try{
 ort.env.wasm.numThreads=navigator.hardwareConcurrency||2;
 session=await ort.InferenceSession.create("https://cdn.jsdelivr.net/gh/renecm600220-create/SINFONCloud@main/docs/u2netp.onnx",{executionProviders:["wasm"],graphOptimizationLevel:"all"});
-$("status").textContent="Selecciona una foto";
+$("status").textContent="Selecciona una foto para probar";
 $("btnRun").disabled=false;
 }catch(e){$("status").textContent="Error: "+e.message;}
 }
@@ -68,7 +151,7 @@ $("preview").innerHTML="";
 const img=document.createElement("img");
 img.src=ev.target.result;
 $("preview").appendChild(img);
-$("status").textContent="Lista";
+$("status").textContent="Lista - Presiona Quitar Fondo";
 $("resultBtns").classList.add("hidden");
 };
 r.readAsDataURL(file);
@@ -168,7 +251,7 @@ $("btnNew").onclick=()=>{
 $("preview").innerHTML="<span style=\"color:#333\">Sin imagen</span>";
 currentFile=null;
 resultUrl=null;
-$("status").textContent="Selecciona una foto";
+$("status").textContent="Selecciona una foto para probar";
 $("resultBtns").classList.add("hidden");
 $("fileInput").value="";
 };
