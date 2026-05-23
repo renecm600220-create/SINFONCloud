@@ -13,14 +13,15 @@ h1{font-size:32px;color:#00d4ff;letter-spacing:8px;margin:12px 0 4px}
 .preview{width:100%;max-width:380px;aspect-ratio:1;background:#111;border-radius:16px;overflow:hidden;display:flex;align-items:center;justify-content:center;border:1px solid #222}
 .preview img{max-width:100%;max-height:100%;object-fit:contain}
 .status{color:#888;font-size:13px;margin:14px 0;text-align:center;min-height:20px}
-.buttons{display:flex;gap:12px;margin-top:8px}
+.buttons{display:flex;gap:12px;margin-top:8px;flex-wrap:wrap;justify-content:center}
 .btn{padding:14px 28px;border:none;border-radius:12px;font-size:15px;font-weight:600;color:#fff;cursor:pointer}
-.btn-gal{background:#1a1a2e}.btn-run{background:#00d4ff;color:#000}.btn-new{background:#1a3a1a}
+.btn-gal{background:#1a1a2e}.btn-run{background:#00d4ff;color:#000}.btn-new{background:#1a3a1a}.btn-save{background:#e8c547;color:#000}
 .btn:disabled{background:#111;color:#333}
 .spinner{display:none;width:28px;height:28px;border:3px solid #222;border-top-color:#00d4ff;border-radius:50%;animation:spin .7s linear infinite;margin:6px auto}
 .spinner.show{display:block}
 @keyframes spin{to{transform:rotate(360deg)}}
 .hidden{display:none}
+.credit{margin-top:auto;padding:20px;font-size:11px;color:#333}
 </style>
 </head>
 <body>
@@ -33,14 +34,17 @@ h1{font-size:32px;color:#00d4ff;letter-spacing:8px;margin:12px 0 4px}
 <button class="btn btn-gal" id="btnPick">Galeria</button>
 <button class="btn btn-run" id="btnRun" disabled>Quitar Fondo</button>
 </div>
-<div class="buttons" style="margin-top:10px">
-<button class="btn btn-new hidden" id="btnNew">Nueva imagen</button>
+<div class="buttons hidden" id="resultBtns">
+<button class="btn btn-save" id="btnSave">Guardar</button>
+<button class="btn btn-new" id="btnNew">Nueva imagen</button>
 </div>
 <input type="file" id="fileInput" accept="image/*" style="display:none">
+<div class="credit">SINFON - Tecnologia avanzada de IA</div>
 <script>
 const MODEL_SIZE=320;
 let session=null;
 let currentFile=null;
+let resultUrl=null;
 const $=id=>document.getElementById(id);
 
 async function loadModel(){
@@ -65,7 +69,7 @@ const img=document.createElement("img");
 img.src=ev.target.result;
 $("preview").appendChild(img);
 $("status").textContent="Lista";
-$("btnNew").classList.add("hidden");
+$("resultBtns").classList.add("hidden");
 };
 r.readAsDataURL(file);
 };
@@ -75,6 +79,7 @@ if(!currentFile)return;
 $("btnRun").disabled=true;
 $("btnPick").disabled=true;
 $("spinner").classList.add("show");
+$("resultBtns").classList.add("hidden");
 try{
 const t0=Date.now();
 $("status").textContent="Cargando imagen...";
@@ -131,13 +136,14 @@ rctx.drawImage(imgData.origImg,0,0,rw,rh);
 rctx.globalCompositeOperation="destination-in";
 rctx.drawImage(maskCanvas,0,0,rw,rh);
 rctx.globalCompositeOperation="source-over";
+resultUrl=resultCanvas.toDataURL("image/png");
 $("preview").innerHTML="";
 const rImg=document.createElement("img");
-rImg.src=resultCanvas.toDataURL("image/png");
+rImg.src=resultUrl;
 $("preview").appendChild(rImg);
 const secs=((Date.now()-t0)/1000).toFixed(1);
 $("status").textContent="Listo en "+secs+"s";
-$("btnNew").classList.remove("hidden");
+$("resultBtns").classList.remove("hidden");
 }catch(e){
 console.error(e);
 $("status").textContent="Error: "+e.message;
@@ -148,11 +154,22 @@ $("spinner").classList.remove("show");
 }
 };
 
+$("btnSave").onclick=()=>{
+if(!resultUrl)return;
+const a=document.createElement("a");
+a.href=resultUrl;
+a.download="SINFON_sin_fondo.png";
+document.body.appendChild(a);
+a.click();
+document.body.removeChild(a);
+};
+
 $("btnNew").onclick=()=>{
 $("preview").innerHTML="<span style=\"color:#333\">Sin imagen</span>";
 currentFile=null;
+resultUrl=null;
 $("status").textContent="Selecciona una foto";
-$("btnNew").classList.add("hidden");
+$("resultBtns").classList.add("hidden");
 $("fileInput").value="";
 };
 </script>
