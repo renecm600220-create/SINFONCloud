@@ -136,7 +136,7 @@ footer{text-align:center;padding:20px 16px;color:var(--muted);font-size:11px;bor
 </div>
 <input type="file" id="fileInput" accept="image/*" style="display:none">
 </div>
-<p style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center">Primera vez tarda en descargar IA (176MB). Luego funciona al instante.</p>
+<p style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center">Primera vez tarda en descargar IA (42MB). Luego funciona al instante.</p>
 </section>
 
 <div class="comparison">
@@ -206,7 +206,7 @@ else if(!photoReady)$("status").textContent="Selecciona una foto primero";
 }
 
 function loadModel(){
-$("status").textContent="Descargando IA (176MB)...";
+$("status").textContent="Descargando IA (42MB)...";
 setProgress(5);
 var s=document.createElement("script");
 s.src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.0/dist/ort.min.js";
@@ -214,7 +214,7 @@ s.onload=function(){
 setProgress(20);
 $("status").textContent="Cargando modelo...";
 ort.env.wasm.numThreads=navigator.hardwareConcurrency||2;
-var modelUrl="https://github.com/renecm600220-create/SINFONCloud/releases/download/v1.0/u2net_human_seg.onnx";
+var modelUrl="https://github.com/renecm600220-create/SINFONCloud/releases/download/v1.0/u2net_human_seg_quant.onnx";
 ort.InferenceSession.create(modelUrl,{executionProviders:["wasm"],graphOptimizationLevel:"all"}).then(function(sess){
 session=sess;modelReady=true;setProgress(100);
 $("progressWrap").classList.add("hidden");
