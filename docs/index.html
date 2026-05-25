@@ -5,9 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
 <title>SINFON - Quitar Fondo con IA sin Conexion</title>
 <meta name="description" content="Quita el fondo de fotos con IA avanzada. Sin internet. Sin suscripcion. Pago unico $4.99.">
-<meta property="og:title" content="SINFON - Quitar Fondo con IA">
-<meta property="og:description" content="IA sin internet. Pago unico $4.99. Sin limite de fotos.">
-<meta property="og:type" content="website">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Source+Serif+4:wght@400;600&display=swap" rel="stylesheet">
 <style>
@@ -47,8 +44,8 @@ h1 span{color:var(--accent)}
 .preview img{max-width:100%;max-height:100%;object-fit:contain}
 .placeholder-text{color:var(--gold);font-size:15px;font-weight:600}
 .status{color:var(--muted);font-size:12px;text-align:center;margin:8px 0;min-height:18px}
-.progress-wrap{width:80%;max-width:260px;height:6px;background:#1a1a24;border-radius:3px;margin:4px auto;overflow:hidden}
-.progress-bar{height:100%;background:var(--accent);border-radius:3px;width:0;transition:width .3s}
+.timer{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:3px;color:var(--accent);text-align:center;display:none}
+.timer.show{display:block}
 .d-btns{display:flex;gap:10px;justify-content:center;margin-top:8px;flex-wrap:wrap}
 .d-btn{padding:12px 24px;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:'Source Serif 4',serif}
 .d-gal{background:var(--accent);color:#000}
@@ -108,8 +105,8 @@ footer{text-align:center;padding:20px 16px;color:var(--muted);font-size:11px;bor
 </div>
 <div class="preview" id="preview"><span class="placeholder-text">Sin imagen</span></div>
 <div class="status" id="status">Iniciando...</div>
-<div class="progress-wrap" id="progressWrap"><div class="progress-bar" id="progressBar"></div></div>
 <div class="spinner" id="spinner"></div>
+<div class="timer" id="timer">0:00</div>
 <div class="d-btns">
 <button class="d-btn d-gal" id="btnPick">Seleccionar Foto</button>
 <button class="d-btn d-run-off" id="btnRun">Quitar Fondo</button>
@@ -120,7 +117,7 @@ footer{text-align:center;padding:20px 16px;color:var(--muted);font-size:11px;bor
 </div>
 <input type="file" id="fileInput" accept="image/*" style="display:none">
 </div>
-<p style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center">Primera vez: descarga IA (42MB). Luego funciona al instante.</p>
+<p style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center">Primera vez: descarga IA. Luego funciona al instante.</p>
 </section>
 <div class="comparison">
 <div class="comp-title">COMPARACION</div>
@@ -148,6 +145,7 @@ var modelReady=false;
 var photoReady=false;
 var currentFile=null;
 var resultUrl=null;
+var timerInterval=null;
 var $=function(id){return document.getElementById(id)};
 
 // Slider
@@ -162,7 +160,21 @@ c.addEventListener("touchmove",function(e){if(d){e.preventDefault();m(e.touches[
 document.addEventListener("touchend",function(){d=false});
 })();
 
-function setProgress(p){$("progressBar").style.width=p+"%"}
+function startTimer(){
+var sec=0;
+$("timer").classList.add("show");
+timerInterval=setInterval(function(){
+sec++;
+var m=Math.floor(sec/60);
+var s=sec%60;
+$("timer").textContent=m+":"+(s<10?"0":"")+s;
+},1000);
+}
+
+function stopTimer(){
+if(timerInterval){clearInterval(timerInterval);timerInterval=null}
+$("timer").classList.remove("show");
+}
 
 function updateRunBtn(){
 var b=$("btnRun");
@@ -174,67 +186,28 @@ else if(!photoReady)$("status").textContent="Selecciona una foto primero";
 }
 
 function loadModel(){
-$("status").textContent="Descargando IA (42MB)...";
-setProgress(2);
+$("status").textContent="Descargando IA...";
+$("spinner").classList.add("show");
+startTimer();
 
-// Load ONNX Runtime
 var s=document.createElement("script");
 s.src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.0/dist/ort.min.js";
 s.onload=function(){
-setProgress(10);
-$("status").textContent="Preparando IA...";
 ort.env.wasm.numThreads=navigator.hardwareConcurrency||2;
-
-// Use fetch with progress tracking
-var modelUrl="https://github.com/renecm600220-create/SINFONCloud/releases/download/v1.0/u2net_human_seg.onnx";
-$("status").textContent="Descargando modelo (42MB)...";
-
-fetch(modelUrl).then(function(resp){
-if(!resp.ok)throw new Error("HTTP "+resp.status);
-var reader=resp.body.getReader();
-var contentLength=175997641;
-var received=0;
-var chunks=[];
-
-function pump(){
-return reader.read().then(function(result){
-if(result.done){
-$("status").textContent="Descarga completa. Cargando IA...";
-setProgress(90);
-var blob=new Blob(chunks);
-chunks=null;
-return blob.arrayBuffer();
-}
-chunks.push(result.value);
-received+=result.value.length;
-var pct=Math.round((received/contentLength)*80)+10;
-setProgress(Math.min(pct,88));
-var mb=(received/1024/1024).toFixed(1);
-$("status").textContent="Descargando... "+mb+"MB";
-return pump();
-});
-}
-
-return pump();
-}).then(function(buffer){
-$("status").textContent="Inicializando IA...";
-setProgress(92);
-return ort.InferenceSession.create(buffer,{executionProviders:["wasm"],graphOptimizationLevel:"all"});
-}).then(function(sess){
-session=sess;
-modelReady=true;
-setProgress(100);
-$("progressWrap").classList.add("hidden");
+var url="https://github.com/renecm600220-create/SINFONCloud/releases/download/v1.0/u2net_human_seg.onnx";
+$("status").textContent="Descargando modelo...";
+ort.InferenceSession.create(url,{executionProviders:["wasm"],graphOptimizationLevel:"all"}).then(function(sess){
+session=sess;modelReady=true;
+stopTimer();$("spinner").classList.remove("show");
 if(photoReady)$("status").textContent="Foto lista - Toca Quitar Fondo";
 else $("status").textContent="IA lista - Selecciona una foto";
 updateRunBtn();
 }).catch(function(e){
-console.error(e);
-$("status").textContent="Error: "+e.message+". Recarga la pagina.";
-setProgress(0);
+console.error(e);stopTimer();$("spinner").classList.remove("show");
+$("status").textContent="Error: "+e.message;
 });
 };
-s.onerror=function(){$("status").textContent="Error cargando IA. Recarga la pagina."};
+s.onerror=function(){stopTimer();$("spinner").classList.remove("show");$("status").textContent="Error cargando IA"};
 document.head.appendChild(s);
 }
 loadModel();
@@ -296,8 +269,8 @@ var ri=document.createElement("img");ri.src=resultUrl;$("preview").appendChild(r
 var s=((Date.now()-t0)/1000).toFixed(1);
 $("status").textContent="Listo en "+s+"s";
 $("resultBtns").classList.remove("hidden");$("spinner").classList.remove("show");$("btnPick").style.opacity="1";updateRunBtn();
-}).catch(function(e){console.error(e);$("status").textContent="Error: "+e.message;$("spinner").classList.remove("show");$("btnPick").style.opacity="1";updateRunBtn()});
-}catch(e){console.error(e);$("status").textContent="Error: "+e.message;$("spinner").classList.remove("show");$("btnPick").style.opacity="1";updateRunBtn()}
+}).catch(function(e){$("status").textContent="Error: "+e.message;$("spinner").classList.remove("show");$("btnPick").style.opacity="1";updateRunBtn()});
+}catch(e){$("status").textContent="Error: "+e.message;$("spinner").classList.remove("show");$("btnPick").style.opacity="1";updateRunBtn()}
 },100);
 };
 img.onerror=function(){$("status").textContent="Error cargando imagen";$("spinner").classList.remove("show");$("btnPick").style.opacity="1";updateRunBtn()};
