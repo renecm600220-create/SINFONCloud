@@ -25,7 +25,8 @@ h1 span{color:var(--accent)}
 
 .slider-section{max-width:500px;margin:20px auto;padding:0 16px}
 .slider-title{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:6px;text-align:center;color:var(--text);margin-bottom:12px}
-.slider-container{position:relative;width:100%;max-width:400px;margin:0 auto;aspect-ratio:1;background:#0a0a12;border-radius:12px;overflow:hidden;cursor:col-resize;touch-action:none}
+.slider-container{position:relative;width:100%;max-width:400px;margin:0 auto;border-radius:12px;overflow:hidden;cursor:col-resize;touch-action:none}
+.slider-container .checker{position:absolute;top:0;left:0;width:100%;height:100%;background-image:linear-gradient(45deg,#1a1a24 25%,transparent 25%),linear-gradient(-45deg,#1a1a24 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#1a1a24 75%),linear-gradient(-45deg,transparent 75%,#1a1a24 75%);background-size:20px 20px;background-position:0 0,0 10px,10px -10px,-10px 0;background-color:#222}
 .slider-container img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover}
 .slider-container .after-img{clip-path:inset(0 0 0 50%)}
 .slider-line{position:absolute;top:0;bottom:0;left:50%;width:3px;background:var(--accent);z-index:10;pointer-events:none;box-shadow:0 0 10px rgba(0,212,255,.5)}
@@ -41,7 +42,7 @@ h1 span{color:var(--accent)}
 .steps{display:flex;gap:8px;justify-content:center;margin-bottom:12px;flex-wrap:wrap}
 .step{background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.15);border-radius:8px;padding:6px 10px;font-size:11px;color:var(--accent);display:flex;align-items:center;gap:4px}
 .step-num{background:var(--accent);color:#000;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:bold;flex-shrink:0}
-.preview{width:100%;max-width:320px;aspect-ratio:1;background:#0a0a12;border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center;margin:0 auto;position:relative}
+.preview{width:100%;max-width:320px;aspect-ratio:1;background:linear-gradient(45deg,#1a1a24 25%,transparent 25%),linear-gradient(-45deg,#1a1a24 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#1a1a24 75%),linear-gradient(-45deg,transparent 75%,#1a1a24 75%);background-size:20px 20px;background-position:0 0,0 10px,10px -10px,-10px 0;background-color:#222;border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center;margin:0 auto;position:relative}
 .preview img{max-width:100%;max-height:100%;object-fit:contain}
 .placeholder-text{color:var(--gold);font-size:15px;font-weight:600}
 .status{color:var(--muted);font-size:12px;text-align:center;margin:8px 0;min-height:18px}
@@ -100,8 +101,9 @@ footer{text-align:center;padding:20px 16px;color:var(--muted);font-size:11px;bor
 <div class="slider-section">
 <div class="slider-title">RESULTADO REAL</div>
 <div class="slider-container" id="sliderContainer">
-<img class="before-img" src="before.jpg" alt="Antes" crossorigin="anonymous">
-<img class="after-img" id="afterImg" src="before.jpg" alt="Despues" crossorigin="anonymous">
+<div class="checker"></div>
+<img class="before-img" src="before.jpg" alt="Antes">
+<img class="after-img" id="afterImg" src="after.png" alt="Despues">
 <div class="slider-line" id="sliderLine"></div>
 <div class="slider-handle" id="sliderHandle">
 <svg viewBox="0 0 24 24"><path d="M8 5l-5 7 5 7M16 5l5 7-5 7"/></svg>
@@ -170,14 +172,13 @@ var currentFile=null;
 var resultUrl=null;
 var $=function(id){return document.getElementById(id)};
 
-// Slider functionality
+// Slider
 (function(){
 var container=$("sliderContainer");
 var line=$("sliderLine");
 var handle=$("sliderHandle");
 var afterImg=$("afterImg");
 var dragging=false;
-
 function move(x){
 var rect=container.getBoundingClientRect();
 var pct=Math.max(0,Math.min(100,((x-rect.left)/rect.width)*100));
@@ -185,7 +186,6 @@ line.style.left=pct+"%";
 handle.style.left=pct+"%";
 afterImg.style.clipPath="inset(0 0 0 "+pct+"%)";
 }
-
 container.addEventListener("mousedown",function(e){dragging=true;move(e.clientX)});
 document.addEventListener("mousemove",function(e){if(dragging)move(e.clientX)});
 document.addEventListener("mouseup",function(){dragging=false});
@@ -195,7 +195,6 @@ document.addEventListener("touchend",function(){dragging=false});
 })();
 
 function setProgress(pct){$("progressBar").style.width=pct+"%"}
-
 function updateRunBtn(){
 var btn=$("btnRun");
 if(photoReady&&modelReady){btn.className="d-btn d-run-on";btn.onclick=doRemove}
@@ -296,7 +295,6 @@ r.readAsDataURL(currentFile);
 }
 
 $("btnSave").onclick=function(){if(!resultUrl)return;var a=document.createElement("a");a.href=resultUrl;a.download="SINFON_sin_fondo.png";document.body.appendChild(a);a.click();document.body.removeChild(a)};
-
 $("btnNew").onclick=function(){
 $("preview").innerHTML="<span class=\"placeholder-text\">Sin imagen</span>";
 currentFile=null;resultUrl=null;photoReady=false;
