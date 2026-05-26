@@ -220,52 +220,27 @@ s.onload=function(){
 setProgress(5);
 ort.env.wasm.numThreads=1;
 
-// Try to load from IndexedDB first
-$("status").textContent="Verificando instalacion...";
+$("status").textContent="Verificando...";
 getFromDB(MODEL_KEY).then(function(cached){
-if(cached){
+if(cached&&cached.byteLength>1000000){
 $("status").textContent="IA instalada. Cargando...";
-setProgress(50);
+setProgress(80);
 $("installMsg").textContent="IA instalada. Carga instantanea.";
 return cached;
 }
 
-// Not cached - download and save
 $("status").textContent="Instalando IA (176MB)...";
 $("installMsg").textContent="Instalando IA... Solo la primera vez.";
 setProgress(8);
 
 return fetch(MODEL_URL).then(function(resp){
 if(!resp.ok)throw new Error("HTTP "+resp.status);
-var total=parseInt(resp.headers.get("content-length"))||175997641;
-var reader=resp.body.getReader();
-var received=0;
-var chunks=[];
-
-function pump(){
-return reader.read().then(function(r){
-if(r.done){
-$("status").textContent="Guardando IA instalada...";
-setProgress(95);
-var blob=new Blob(chunks);
-return blob.arrayBuffer();
-}
-chunks.push(r.value);
-received+=r.value.length;
-var pct=Math.round((received/total)*85)+8;
-setProgress(Math.min(pct,93));
-var mb=(received/1024/1024).toFixed(1);
-$("status").textContent="Instalando... "+mb+"MB / 176MB";
-return pump();
-});
-}
-
-return pump();
+return resp.arrayBuffer();
 }).then(function(buffer){
-$("status").textContent="Guardando para uso futuro...";
+$("status").textContent="Guardando...";
 setProgress(96);
 return saveToDB(MODEL_KEY,buffer).then(function(){
-$("installMsg").textContent="IA instalada. Ahora funciona al instante, incluso sin internet.";
+$("installMsg").textContent="IA instalada. Funciona al instante incluso sin internet.";
 return buffer;
 });
 });
@@ -284,7 +259,7 @@ updateRunBtn();
 }).catch(function(e){
 console.error(e);
 $("spinner").classList.remove("show");
-$("status").textContent="Error: "+e.message;
+$("status").textContent="Error: "+e.message+". Refresca para reintentar.";
 });
 };
 s.onerror=function(){$("spinner").classList.remove("show");$("status").textContent="Error cargando IA"};
