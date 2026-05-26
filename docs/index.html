@@ -117,7 +117,7 @@ footer{text-align:center;padding:20px 16px;color:var(--muted);font-size:11px;bor
 </div>
 <input type="file" id="fileInput" accept="image/*" style="display:none">
 </div>
-<p style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center">Primera vez: descarga IA. Luego funciona al instante.</p>
+<p style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center">Primera vez: descarga IA (176MB). Luego funciona al instante.</p>
 </section>
 <div class="comparison">
 <div class="comp-title">COMPARACION</div>
@@ -147,7 +147,6 @@ var currentFile=null;
 var resultUrl=null;
 var $=function(id){return document.getElementById(id)};
 
-// Slider
 (function(){
 var c=$("sliderContainer"),l=$("sliderLine"),h=$("sliderHandle"),a=$("afterImg"),d=false;
 function m(x){var r=c.getBoundingClientRect();var p=Math.max(0,Math.min(100,((x-r.left)/r.width)*100));l.style.left=p+"%";h.style.left=p+"%";a.style.clipPath="inset(0 0 0 "+p+"%)"}
@@ -169,107 +168,69 @@ else if(!photoReady)$("status").textContent="Selecciona una foto primero";
 }}
 }
 
-// Try multiple model sources
-var MODEL_SOURCES=[
-"https://huggingface.co/neural-architect-dev/sinfon-model/resolve/main/u2net.onnx,
-"u2netp.onnx"
-];
-var MODEL_NAMES=["u2net_human_seg (176MB)","u2netp (4.5MB)"];
+var MODEL_URL="https://huggingface.co/neural-architect-dev/sinfon-model/resolve/main/u2net.onnx";
 
-function tryLoadModel(idx){
-if(idx>=MODEL_SOURCES.length){
-$("status").textContent="Error: no se pudo cargar la IA";
-$("progressWrap").classList.add("hidden");
-return;
-}
-$("status").textContent="Probando modelo "+(idx+1)+": "+MODEL_NAMES[idx]+"...";
-setProgress(idx*10);
+function loadModel(){
+$("status").textContent="Descargando IA (176MB)...";
+$("spinner").classList.add("show");
+setProgress(5);
 
 var s=document.createElement("script");
 s.src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.0/dist/ort.min.js";
 s.onload=function(){
+setProgress(10);
+$("status").textContent="Conectando CDN...";
 ort.env.wasm.numThreads=1;
-$("status").textContent="Descargando "+MODEL_NAMES[idx]+"...";
 
-var url=MODEL_SOURCES[idx];
-if(url.indexOf("allorigins")===0){
-// Use fetch with proxy, get ArrayBuffer, pass to ORT
-fetch(url).then(function(resp){
+fetch(MODEL_URL).then(function(resp){
 if(!resp.ok)throw new Error("HTTP "+resp.status);
+var total=parseInt(resp.headers.get("content-length"))||175997641;
 var reader=resp.body.getReader();
-var contentLength=parseInt(resp.headers.get("content-length"))||175997641;
 var received=0;
 var chunks=[];
+
 function pump(){
-return reader.read().then(function(result){
-if(result.done){
-var pct=Math.round((received/contentLength)*80)+10;
-setProgress(pct);
-$("status").textContent="Cargando IA...";
+return reader.read().then(function(r){
+if(r.done){
+$("status").textContent="Carga completa. Inicializando IA...";
+setProgress(95);
 var blob=new Blob(chunks);
-chunks=null;
 return blob.arrayBuffer();
 }
-chunks.push(result.value);
-received+=result.value.length;
-var pct=Math.round((received/contentLength)*80)+10;
-setProgress(Math.min(pct,88));
+chunks.push(r.value);
+received+=r.value.length;
+var pct=Math.round((received/total)*85)+10;
+setProgress(Math.min(pct,93));
 var mb=(received/1024/1024).toFixed(1);
-$("status").textContent="Descargando... "+mb+"MB / "+(contentLength/1024/1024).toFixed(0)+"MB";
+$("status").textContent="Descargando... "+mb+"MB / 176MB";
 return pump();
 });
-}
-return pump();
-}).then(function(buffer){
-setProgress(95);
-return ort.InferenceSession.create(buffer,{executionProviders:["wasm"],graphOptimizationLevel:"all"});
-}).then(function(sess){
-session=sess;modelReady=true;setProgress(100);
-$("progressWrap").classList.add("hidden");
-$("status").textContent="IA lista - Selecciona una foto";
-updateRunBtn();
-}).catch(function(e){
-console.log("Proxy failed: "+e.message+", trying local model...");
-tryLoadModel(idx+1);
-});
-} else {
-// Local model - direct load
-ort.InferenceSession.create(url,{executionProviders:["wasm"],graphOptimizationLevel:"all"}).then(function(sess){
-session=sess;modelReady=true;setProgress(100);
-$("progressWrap").classList.add("hidden");
-$("status").textContent="IA lista - Selecciona una foto";
-updateRunBtn();
-}).catch(function(e){
-console.log("Local model failed: "+e.message);
-tryLoadModel(idx+1);
-});
-}
-};
-s.onerror=function(){
-if(idx===0)tryLoadModel(idx+1);
-else $("status").textContent="Error cargando IA";
-};
-if(idx===0)document.head.appendChild(s);
-else{
-// ORT already loaded, just try next model
-if(typeof ort!=="undefined"){
-ort.env.wasm.numThreads=1;
-var url=MODEL_SOURCES[idx];
-ort.InferenceSession.create(url,{executionProviders:["wasm"],graphOptimizationLevel:"all"}).then(function(sess){
-session=sess;modelReady=true;setProgress(100);
-$("progressWrap").classList.add("hidden");
-$("status").textContent="IA lista - Selecciona una foto";
-updateRunBtn();
-}).catch(function(e){
-console.log("All models failed");
-$("status").textContent="Error: no se pudo cargar IA";
-$("progressWrap").classList.add("hidden");
-});
-}
-}
 }
 
-tryLoadModel(0);
+return pump();
+}).then(function(buffer){
+setProgress(96);
+$("status").textContent="Inicializando IA...";
+return ort.InferenceSession.create(buffer,{executionProviders:["wasm"],graphOptimizationLevel:"all"});
+}).then(function(sess){
+session=sess;modelReady=true;
+setProgress(100);
+$("progressWrap").classList.add("hidden");
+$("spinner").classList.remove("show");
+if(photoReady)$("status").textContent="Foto lista - Toca Quitar Fondo";
+else $("status").textContent="IA lista - Selecciona una foto";
+updateRunBtn();
+}).catch(function(e){
+console.error(e);
+$("spinner").classList.remove("show");
+$("status").textContent="Error: "+e.message;
+});
+};
+s.onerror=function(){$("spinner").classList.remove("show");$("status").textContent="Error cargando IA"};
+document.head.appendChild(s);
+}
+
+loadModel();
 
 $("btnPick").onclick=function(){$("fileInput").click()};
 $("fileInput").onchange=function(e){
