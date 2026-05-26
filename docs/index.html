@@ -117,7 +117,7 @@ footer{text-align:center;padding:20px 16px;color:var(--muted);font-size:11px;bor
 </div>
 <input type="file" id="fileInput" accept="image/*" style="display:none">
 </div>
-<p style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center" id="installMsg">Primera vez: instala la IA (176MB). Despues funciona al instante, incluso sin internet.</p>
+<p style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center" id="installMsg">Primera vez: instala la IA (176MB). Despues funciona al instante.</p>
 </section>
 <div class="comparison">
 <div class="comp-title">COMPARACION</div>
@@ -147,9 +147,17 @@ var currentFile=null;
 var resultUrl=null;
 var $=function(id){return document.getElementById(id)};
 var MODEL_URL="https://huggingface.co/neural-architect-dev/sinfon-model/resolve/main/u2net.onnx";
-var DB_NAME="SINFON_DB";
-var STORE_NAME="models";
-var MODEL_KEY="u2net_human_seg";
+
+// Register Service Worker
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.register("sw.js").then(function(r){
+    console.log("SW registrado");
+    if(r.installing)r.installing.addEventListener("statechange",function(){
+      if(this.state==="activated")loadModel();
+    });
+    else loadModel();
+  }).catch(function(){loadModel()});
+}else{loadModel()}
 
 // Slider
 (function(){
@@ -174,85 +182,54 @@ else if(!photoReady)$("status").textContent="Selecciona una foto primero";
 }}
 }
 
-// IndexedDB functions
-function openDB(){
-return new Promise(function(resolve,reject){
-var req=indexedDB.open(DB_NAME,1);
-req.onupgradeneeded=function(e){
-e.target.result.createObjectStore(STORE_NAME);
-};
-req.onsuccess=function(e){resolve(e.target.result)};
-req.onerror=function(e){reject(e.target.error)};
-});
-}
-
-function getFromDB(key){
-return openDB().then(function(db){
-return new Promise(function(resolve,reject){
-var tx=db.transaction(STORE_NAME,"readonly");
-var store=tx.objectStore(STORE_NAME);
-var req=store.get(key);
-req.onsuccess=function(){resolve(req.result)};
-req.onerror=function(){reject(req.error)};
-});
-});
-}
-
-function saveToDB(key,value){
-return openDB().then(function(db){
-return new Promise(function(resolve,reject){
-var tx=db.transaction(STORE_NAME,"readwrite");
-var store=tx.objectStore(STORE_NAME);
-var req=store.put(value,key);
-req.onsuccess=function(){resolve()};
-req.onerror=function(){reject(req.error)};
-});
-});
-}
-
 function loadModel(){
 setProgress(2);
 $("spinner").classList.add("show");
+$("status").textContent="Cargando IA...";
 
 var s=document.createElement("script");
 s.src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.0/dist/ort.min.js";
 s.onload=function(){
 setProgress(5);
 ort.env.wasm.numThreads=1;
+$("status").textContent="Descargando modelo...";
 
-$("status").textContent="Verificando...";
-getFromDB(MODEL_KEY).then(function(cached){
-if(cached&&cached.byteLength>1000000){
-$("status").textContent="IA instalada. Cargando...";
-setProgress(80);
-$("installMsg").textContent="IA instalada. Carga instantanea.";
-return cached;
+fetch(MODEL_URL).then(function(resp){
+if(!resp.ok)throw new Error("HTTP "+resp.status);
+var total=parseInt(resp.headers.get("content-length"))||175997641;
+var reader=resp.body.getReader();
+var received=0;
+var chunks=[];
+
+function pump(){
+return reader.read().then(function(r){
+if(r.done){
+setProgress(95);
+$("status").textContent="Inicializando IA...";
+var blob=new Blob(chunks);
+chunks=null;
+return blob.arrayBuffer();
+}
+chunks.push(r.value);
+received+=r.value.length;
+var pct=Math.round((received/total)*90)+5;
+setProgress(Math.min(pct,94));
+var mb=(received/1024/1024).toFixed(1);
+$("status").textContent="Descargando... "+mb+"MB / 176MB";
+return pump();
+});
 }
 
-$("status").textContent="Instalando IA (176MB)...";
-$("installMsg").textContent="Instalando IA... Solo la primera vez.";
-setProgress(8);
-
-return fetch(MODEL_URL).then(function(resp){
-if(!resp.ok)throw new Error("HTTP "+resp.status);
-return resp.arrayBuffer();
+return pump();
 }).then(function(buffer){
-$("status").textContent="Guardando...";
 setProgress(96);
-return saveToDB(MODEL_KEY,buffer).then(function(){
-$("installMsg").textContent="IA instalada. Funciona al instante incluso sin internet.";
-return buffer;
-});
-});
-}).then(function(buffer){
-$("status").textContent="Inicializando IA...";
-setProgress(97);
 return ort.InferenceSession.create(buffer,{executionProviders:["wasm"],graphOptimizationLevel:"all"});
 }).then(function(sess){
 session=sess;modelReady=true;
 setProgress(100);
 $("progressWrap").classList.add("hidden");
 $("spinner").classList.remove("show");
+$("installMsg").textContent="IA lista. La proxima vez carga instantaneo.";
 if(photoReady)$("status").textContent="Foto lista - Toca Quitar Fondo";
 else $("status").textContent="IA lista - Selecciona una foto";
 updateRunBtn();
@@ -265,8 +242,6 @@ $("status").textContent="Error: "+e.message+". Refresca para reintentar.";
 s.onerror=function(){$("spinner").classList.remove("show");$("status").textContent="Error cargando IA"};
 document.head.appendChild(s);
 }
-
-if(navigator.storage && navigator.storage.persist){navigator.storage.persist().then(function(g){console.log('Persistencia:',g?'SI garantizada':'Depende del navegador')})}loadModel();
 
 $("btnPick").onclick=function(){$("fileInput").click()};
 $("fileInput").onchange=function(e){
