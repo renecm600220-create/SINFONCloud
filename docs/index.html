@@ -291,7 +291,7 @@ s.onerror=function(){$("spinner").classList.remove("show");$("status").textConte
 document.head.appendChild(s);
 }
 
-loadModel();
+if(navigator.storage && navigator.storage.persist){navigator.storage.persist().then(function(g){console.log('Persistencia:',g?'SI garantizada':'Depende del navegador')})}loadModel();
 
 $("btnPick").onclick=function(){$("fileInput").click()};
 $("fileInput").onchange=function(e){
