@@ -117,7 +117,7 @@ footer{text-align:center;padding:20px 16px;color:var(--muted);font-size:11px;bor
 </div>
 <input type="file" id="fileInput" accept="image/*" style="display:none">
 </div>
-<p style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center" id="installMsg">Primera vez: instala la IA (176MB). Despues funciona al instante.</p>
+<p style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center" id="installMsg">Primera vez: descarga la IA (176MB). Despues carga del cache del navegador.</p>
 </section>
 <div class="comparison">
 <div class="comp-title">COMPARACION</div>
@@ -148,16 +148,12 @@ var resultUrl=null;
 var $=function(id){return document.getElementById(id)};
 var MODEL_URL="https://huggingface.co/neural-architect-dev/sinfon-model/resolve/main/u2net.onnx";
 
-// Register Service Worker
+// Borrar cualquier Service Worker viejo
 if("serviceWorker" in navigator){
-  navigator.serviceWorker.register("sw.js").then(function(r){
-    console.log("SW registrado");
-    if(r.installing)r.installing.addEventListener("statechange",function(){
-      if(this.state==="activated")loadModel();
-    });
-    else loadModel();
-  }).catch(function(){loadModel()});
-}else{loadModel()}
+  navigator.serviceWorker.getRegistrations().then(function(regs){
+    for(var i=0;i<regs.length;i++){regs[i].unregister()}
+  });
+}
 
 // Slider
 (function(){
@@ -177,7 +173,7 @@ function updateRunBtn(){
 var b=$("btnRun");
 if(photoReady&&modelReady){b.className="d-btn d-run-on";b.onclick=doRemove}
 else{b.className="d-btn d-run-off";b.onclick=function(){
-if(!modelReady)$("status").textContent="Espera, instalando IA...";
+if(!modelReady)$("status").textContent="Espera, descargando IA...";
 else if(!photoReady)$("status").textContent="Selecciona una foto primero";
 }}
 }
@@ -192,56 +188,35 @@ s.src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.0/dist/ort.min.js";
 s.onload=function(){
 setProgress(5);
 ort.env.wasm.numThreads=1;
-$("status").textContent="Descargando modelo...";
+$("status").textContent="Descargando modelo (176MB)...";
 
 fetch(MODEL_URL).then(function(resp){
 if(!resp.ok)throw new Error("HTTP "+resp.status);
-var total=parseInt(resp.headers.get("content-length"))||175997641;
-var reader=resp.body.getReader();
-var received=0;
-var chunks=[];
-
-function pump(){
-return reader.read().then(function(r){
-if(r.done){
+return resp.arrayBuffer();
+}).then(function(buffer){
 setProgress(95);
 $("status").textContent="Inicializando IA...";
-var blob=new Blob(chunks);
-chunks=null;
-return blob.arrayBuffer();
-}
-chunks.push(r.value);
-received+=r.value.length;
-var pct=Math.round((received/total)*90)+5;
-setProgress(Math.min(pct,94));
-var mb=(received/1024/1024).toFixed(1);
-$("status").textContent="Descargando... "+mb+"MB / 176MB";
-return pump();
-});
-}
-
-return pump();
-}).then(function(buffer){
-setProgress(96);
 return ort.InferenceSession.create(buffer,{executionProviders:["wasm"],graphOptimizationLevel:"all"});
 }).then(function(sess){
 session=sess;modelReady=true;
 setProgress(100);
 $("progressWrap").classList.add("hidden");
 $("spinner").classList.remove("show");
-$("installMsg").textContent="IA lista. La proxima vez carga instantaneo.";
+$("installMsg").textContent="IA lista. Se cachea en el navegador para la proxima vez.";
 if(photoReady)$("status").textContent="Foto lista - Toca Quitar Fondo";
 else $("status").textContent="IA lista - Selecciona una foto";
 updateRunBtn();
 }).catch(function(e){
 console.error(e);
 $("spinner").classList.remove("show");
-$("status").textContent="Error: "+e.message+". Refresca para reintentar.";
+$("status").textContent="Error: "+e.message;
 });
 };
 s.onerror=function(){$("spinner").classList.remove("show");$("status").textContent="Error cargando IA"};
 document.head.appendChild(s);
 }
+
+loadModel();
 
 $("btnPick").onclick=function(){$("fileInput").click()};
 $("fileInput").onchange=function(e){
@@ -313,7 +288,7 @@ $("btnSave").onclick=function(){if(!resultUrl)return;var a=document.createElemen
 $("btnNew").onclick=function(){
 $("preview").innerHTML="<span class=\"placeholder-text\">Sin imagen</span>";
 currentFile=null;resultUrl=null;photoReady=false;
-if(modelReady)$("status").textContent="IA lista - Selecciona una foto";else $("status").textContent="Instalando IA...";
+if(modelReady)$("status").textContent="IA lista - Selecciona una foto";else $("status").textContent="Descargando IA...";
 $("resultBtns").classList.add("hidden");$("fileInput").value="";updateRunBtn();
 };
 </script>
