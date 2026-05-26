@@ -117,7 +117,7 @@ footer{text-align:center;padding:20px 16px;color:var(--muted);font-size:11px;bor
 </div>
 <input type="file" id="fileInput" accept="image/*" style="display:none">
 </div>
-<p style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center" id="installMsg">Primera vez: descarga la IA (176MB). Despues carga del cache del navegador.</p>
+<p style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center" id="installMsg">Primera vez: instala la IA (176MB). Despues carga al instante.</p>
 </section>
 <div class="comparison">
 <div class="comp-title">COMPARACION</div>
@@ -148,7 +148,7 @@ var resultUrl=null;
 var $=function(id){return document.getElementById(id)};
 var MODEL_URL="https://huggingface.co/neural-architect-dev/sinfon-model/resolve/main/u2net.onnx";
 
-// Borrar cualquier Service Worker viejo
+// Borrar Service Workers viejos
 if("serviceWorker" in navigator){
   navigator.serviceWorker.getRegistrations().then(function(regs){
     for(var i=0;i<regs.length;i++){regs[i].unregister()}
@@ -173,64 +173,133 @@ function updateRunBtn(){
 var b=$("btnRun");
 if(photoReady&&modelReady){b.className="d-btn d-run-on";b.onclick=doRemove}
 else{b.className="d-btn d-run-off";b.onclick=function(){
-if(!modelReady)$("status").textContent="Espera, descargando IA...";
+if(!modelReady)$("status").textContent="Espera, instalando IA...";
 else if(!photoReady)$("status").textContent="Selecciona una foto primero";
 }}
 }
 
-function loadModel(){
-setProgress(2);
-$("spinner").classList.add("show");
-$("status").textContent="Cargando IA...";
-
-var s=document.createElement("script");
-s.src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.0/dist/ort.min.js";
-s.onload=function(){
-setProgress(5);
-ort.env.wasm.numThreads=1;
-$("status").textContent="Descargando modelo (176MB)...";
-
-caches.open("sinfon-model-v1").then(function(cache){
-return cache.match("model-buffer").then(function(cached){
-if(cached){
-$("status").textContent="IA guardada. Cargando...";
-setProgress(90);
-return cached.arrayBuffer();
+// OPFS - almacenamiento permanente del navegador
+function saveModelToOPFS(buffer){
+  if(navigator.storage && navigator.storage.getDirectory){
+    return navigator.storage.getDirectory().then(function(root){
+      return root.getFileHandle("u2net_model.bin",{create:true});
+    }).then(function(fh){
+      return fh.createWritable();
+    }).then(function(writable){
+      return writable.write(buffer).then(function(){
+        return writable.close();
+      }).then(function(){
+        console.log("Modelo guardado en OPFS");
+        return true;
+      });
+    }).catch(function(e){
+      console.log("OPFS save error:",e);
+      return false;
+    });
+  }
+  return Promise.resolve(false);
 }
-$("status").textContent="Descargando modelo (176MB)...";
-return fetch(MODEL_URL).then(function(resp){
-if(!resp.ok)throw new Error("HTTP "+resp.status);
-return resp.arrayBuffer();
-}).then(function(buffer){
-$("status").textContent="Guardando para proximas veces...";
-setProgress(94);
-var blob=new Blob([buffer]);
-var resp=new Response(blob);
-cache.put("model-buffer",resp);
-return buffer;
-});
-});
-}).then(function(buffer){
-setProgress(95);
-$("status").textContent="Inicializando IA...";
-return ort.InferenceSession.create(buffer,{executionProviders:["wasm"],graphOptimizationLevel:"all"});
-}).then(function(sess){
-session=sess;modelReady=true;
-setProgress(100);
-$("progressWrap").classList.add("hidden");
-$("spinner").classList.remove("show");
-$("installMsg").textContent="IA lista. Se cachea en el navegador para la proxima vez.";
-if(photoReady)$("status").textContent="Foto lista - Toca Quitar Fondo";
-else $("status").textContent="IA lista - Selecciona una foto";
-updateRunBtn();
-}).catch(function(e){
-console.error(e);
-$("spinner").classList.remove("show");
-$("status").textContent="Error: "+e.message;
-});
-};
-s.onerror=function(){$("spinner").classList.remove("show");$("status").textContent="Error cargando IA"};
-document.head.appendChild(s);
+
+function loadModelFromOPFS(){
+  if(navigator.storage && navigator.storage.getDirectory){
+    return navigator.storage.getDirectory().then(function(root){
+      return root.getFileHandle("u2net_model.bin");
+    }).then(function(fh){
+      return fh.getFile();
+    }).then(function(file){
+      if(file.size>1000000){
+        console.log("Modelo encontrado en OPFS:",file.size,"bytes");
+        return file.arrayBuffer();
+      }
+      return null;
+    }).catch(function(e){
+      console.log("OPFS no tiene modelo:",e.message);
+      return null;
+    });
+  }
+  return Promise.resolve(null);
+}
+
+function loadORTEngine(buffer){
+  $("status").textContent="Inicializando IA...";
+  setProgress(97);
+  return ort.InferenceSession.create(buffer,{executionProviders:["wasm"],graphOptimizationLevel:"all"});
+}
+
+function downloadAndSave(){
+  $("status").textContent="Descargando modelo (176MB)...";
+  setProgress(8);
+  return fetch(MODEL_URL).then(function(resp){
+    if(!resp.ok)throw new Error("HTTP "+resp.status);
+    var total=parseInt(resp.headers.get("content-length"))||175997641;
+    var reader=resp.body.getReader();
+    var received=0;
+    var chunks=[];
+    function pump(){
+      return reader.read().then(function(r){
+        if(r.done){
+          setProgress(95);
+          $("status").textContent="Guardando modelo...";
+          var blob=new Blob(chunks);
+          chunks=null;
+          return blob.arrayBuffer();
+        }
+        chunks.push(r.value);
+        received+=r.value.length;
+        var pct=Math.round((received/total)*85)+8;
+        setProgress(Math.min(pct,93));
+        var mb=(received/1024/1024).toFixed(1);
+        $("status").textContent="Instalando... "+mb+"MB / 176MB";
+        return pump();
+      });
+    }
+    return pump();
+  }).then(function(buffer){
+    setProgress(96);
+    saveModelToOPFS(buffer);
+    return buffer;
+  });
+}
+
+function loadModel(){
+  setProgress(2);
+  $("spinner").classList.add("show");
+  $("status").textContent="Cargando IA...";
+
+  var s=document.createElement("script");
+  s.src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.0/dist/ort.min.js";
+  s.onload=function(){
+    setProgress(5);
+    ort.env.wasm.numThreads=1;
+    $("status").textContent="Verificando instalacion...";
+
+    loadModelFromOPFS().then(function(cached){
+      if(cached){
+        $("status").textContent="IA instalada. Cargando...";
+        setProgress(90);
+        $("installMsg").textContent="IA instalada. Carga instantanea.";
+        return cached;
+      }
+      return downloadAndSave();
+    }).then(function(buffer){
+      return loadORTEngine(buffer);
+    }).then(function(sess){
+      session=sess;modelReady=true;
+      setProgress(100);
+      $("progressWrap").classList.add("hidden");
+      $("spinner").classList.remove("show");
+      $("installMsg").textContent="IA lista. Guardada permanentemente en tu navegador.";
+      if(photoReady)$("status").textContent="Foto lista - Toca Quitar Fondo";
+      else $("status").textContent="IA lista - Selecciona una foto";
+      updateRunBtn();
+    }).catch(function(e){
+      console.error(e);
+      $("spinner").classList.remove("show");
+      $("status").textContent="Error: "+e.message;
+    });
+  };
+  s.onerror=function(){$("spinner").classList.remove("show");$("status").textContent="Error cargando IA"};
+  document.head.appendChild(s);
 }
 
 loadModel();
@@ -305,7 +374,7 @@ $("btnSave").onclick=function(){if(!resultUrl)return;var a=document.createElemen
 $("btnNew").onclick=function(){
 $("preview").innerHTML="<span class=\"placeholder-text\">Sin imagen</span>";
 currentFile=null;resultUrl=null;photoReady=false;
-if(modelReady)$("status").textContent="IA lista - Selecciona una foto";else $("status").textContent="Descargando IA...";
+if(modelReady)$("status").textContent="IA lista - Selecciona una foto";else $("status").textContent="Instalando IA...";
 $("resultBtns").classList.add("hidden");$("fileInput").value="";updateRunBtn();
 };
 </script>
