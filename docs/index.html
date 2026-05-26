@@ -306,5 +306,8 @@ if(modelReady)$("status").textContent="IA lista - Selecciona una foto";else $("s
 $("resultBtns").classList.add("hidden");$("fileInput").value="";updateRunBtn();
 };
 </script>
+<script>
+if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js")}
+</script>
 </body>
 </html>
