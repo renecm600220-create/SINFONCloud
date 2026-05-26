@@ -190,9 +190,26 @@ setProgress(5);
 ort.env.wasm.numThreads=1;
 $("status").textContent="Descargando modelo (176MB)...";
 
-fetch(MODEL_URL).then(function(resp){
+caches.open("sinfon-model-v1").then(function(cache){
+return cache.match("model-buffer").then(function(cached){
+if(cached){
+$("status").textContent="IA guardada. Cargando...";
+setProgress(90);
+return cached.arrayBuffer();
+}
+$("status").textContent="Descargando modelo (176MB)...";
+return fetch(MODEL_URL).then(function(resp){
 if(!resp.ok)throw new Error("HTTP "+resp.status);
 return resp.arrayBuffer();
+}).then(function(buffer){
+$("status").textContent="Guardando para proximas veces...";
+setProgress(94);
+var blob=new Blob([buffer]);
+var resp=new Response(blob);
+cache.put("model-buffer",resp);
+return buffer;
+});
+});
 }).then(function(buffer){
 setProgress(95);
 $("status").textContent="Inicializando IA...";
