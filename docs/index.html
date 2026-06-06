@@ -68,8 +68,13 @@ h1 span{color:var(--accent)}
 .cta{background:var(--surface);border-radius:20px;padding:32px 24px;max-width:400px;margin:20px auto;text-align:center;border:1px solid #1a1a24}
 .cta h2{font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:4px;color:var(--text)}
 .cta .price{font-size:42px;color:var(--accent);font-family:'Bebas Neue',sans-serif;margin:8px 0}
-.buy-btn{display:inline-block;background:#222;color:#555;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:4px;padding:12px 36px;border-radius:10px;margin-top:12px;cursor:not-allowed}
-.coming-soon{font-size:11px;color:var(--muted);margin-top:6px}
+.buy-btn{display:inline-block;background:var(--accent);color:#000;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:4px;padding:12px 36px;border-radius:10px;margin-top:12px;text-decoration:none;box-shadow:0 0 20px rgba(0,212,255,.4);cursor:pointer;animation:glow 2s ease-in-out infinite alternate}
+.install-note{font-size:11px;color:var(--muted);margin-top:8px;background:rgba(255,255,255,.03);padding:8px;border-radius:6px}
+.crypto-box{margin-top:16px;padding-top:16px;border-top:1px solid #1a1a24}
+.crypto-title{font-size:12px;color:var(--gold);margin-bottom:6px;font-family:'Bebas Neue',sans-serif;letter-spacing:2px}
+.crypto-addr{font-size:11px;color:var(--muted);font-family:monospace;word-break:break-all;margin:4px 0;cursor:pointer;padding:4px 8px;border-radius:4px;background:rgba(0,212,255,.05)}
+.crypto-addr:hover{background:rgba(0,212,255,.1)}
+.whatsapp-btn{display:inline-block;background:#25D366;color:#fff;font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:3px;padding:10px 28px;border-radius:10px;margin-top:12px;text-decoration:none;cursor:pointer}
 footer{text-align:center;padding:20px 16px;color:var(--muted);font-size:11px;border-top:1px solid #1a1a24;margin-top:30px}
 </style>
 </head>
@@ -79,11 +84,13 @@ footer{text-align:center;padding:20px 16px;color:var(--muted);font-size:11px;bor
 <div class="tagline">IA sin conexion a internet</div>
 <div class="badge" onclick="document.getElementById('demo').scrollIntoView({behavior:'smooth'})">PRUEBA GRATIS AQUI</div>
 </section>
+
 <div class="features">
 <div class="feature"><h3>SIN INTERNET</h3><p>La IA corre en tu dispositivo. Tus fotos nunca salen.</p></div>
 <div class="feature"><h3>CALIDAD PROFESIONAL</h3><p>Elimina fondos de personas completas.</p></div>
 <div class="feature"><h3>$4.99 PAGO UNICO</h3><p>Para siempre. Sin renovaciones.</p></div>
 </div>
+
 <div class="slider-section">
 <div class="slider-title">RESULTADO REAL</div>
 <div class="slider-container" id="sliderContainer">
@@ -94,6 +101,7 @@ footer{text-align:center;padding:20px 16px;color:var(--muted);font-size:11px;bor
 </div>
 <div class="slider-labels"><span class="slider-label">ANTES</span><span class="slider-label">DESPUES</span></div>
 </div>
+
 <section class="demo" id="demo">
 <div class="demo-title">PRUEBA CON TU FOTO</div>
 <div class="demo-sub">Selecciona una foto y quita el fondo</div>
@@ -119,6 +127,7 @@ footer{text-align:center;padding:20px 16px;color:var(--muted);font-size:11px;bor
 </div>
 <p style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center" id="installMsg">Primera vez: instala la IA (176MB). Despues carga al instante.</p>
 </section>
+
 <div class="comparison">
 <div class="comp-title">COMPARACION</div>
 <table class="comp-table">
@@ -129,21 +138,28 @@ footer{text-align:center;padding:20px 16px;color:var(--muted);font-size:11px;bor
 <tr><td>Sin limite</td><td class="check">&#10003;</td><td class="cross">&#10007;</td><td class="check">&#10003;</td></tr>
 </table>
 </div>
+
 <div class="cta">
 <h2>SINFON PC</h2>
-<p style="color:var(--muted);font-size:13px">Version completa - Mas rapida y mejor calidad</p>
+<p style="color:var(--muted);font-size:13px">Version completa para Windows - Mas rapida y mejor calidad</p>
 <div class="price">$4.99</div>
 <p style="font-size:12px;color:var(--muted)">Pago unico - Windows - Sin suscripcion</p>
-<a href="https://drive.google.com/file/d/1FcAJyBoGG1dyhntBbi0M6iPE__W0IXXy/view?usp=sharing" target="_blank" style="display:inline-block;background:#00d4ff;color:#000;font-family:Bebas Neue,sans-serif;font-size:18px;letter-spacing:4px;padding:12px 36px;border-radius:10px;margin-top:12px;text-decoration:none;box-shadow:0 0 20px rgba(0,212,255,.4)">DESCARGAR GRATIS</a>
-<p style="font-size:12px;color:var(--accent);margin-top:8px">Prueba 3 dias gratis - Despues $4.99 USD</p>
-<p style="font-size:11px;color:var(--muted);margin-top:6px">Si Windows bloquea → Mas informacion → Ejecutar</p>
-<div style="margin-top:16px;padding-top:16px;border-top:1px solid #1a1a24">
-<p style="font-size:12px;color:var(--gold);margin-bottom:6px">Paga con crypto (USDT)</p>
-<p style="font-size:11px;color:var(--muted)">TRC20: TJ3ePJkt5Toj22mJBWXDAesVRx4zyjkTv7</p>
-<p style="font-size:11px;color:var(--muted)">ERC20: 0x3586DF2caE327Bb1681576ba411B678826A3925d</p>
+<a href="https://drive.google.com/uc?export=download&id=1FcAJyBoGG1dyhntBbi0M6iPE__W0IXXy" target="_blank" class="buy-btn">DESCARGAR GRATIS</a>
+<p style="font-size:13px;color:var(--accent);margin-top:10px">Prueba 3 dias gratis - Despues $4.99 USD</p>
+<div class="install-note">Si Windows bloquea la instalacion:<br><b style="color:var(--accent)">Mas informacion → Ejecutar de todas formas</b></div>
+<div class="crypto-box">
+<div class="crypto-title">PAGA CON CRYPTO (USDT)</div>
+<p style="font-size:11px;color:var(--muted);margin-bottom:4px">Red TRON (TRC20) - Comision baja:</p>
+<div class="crypto-addr" onclick="navigator.clipboard.writeText(this.textContent);this.style.color='#0f0';setTimeout(function(el){el.style.color=''},2000,this)">TJ3ePJkt5Toj22mJBWXDAesVRx4zyjkTv7</div>
+<p style="font-size:11px;color:var(--muted);margin-top:6px">Red Ethereum (ERC20):</p>
+<div class="crypto-addr" onclick="navigator.clipboard.writeText(this.textContent);this.style.color='#0f0';setTimeout(function(el){el.style.color=''},2000,this)">0x3586DF2caE327Bb1681576ba411B678826A3925d</div>
+<p style="font-size:11px;color:var(--muted);margin-top:8px">Despues de pagar, envia tu Transaction Hash por WhatsApp:</p>
+<a href="https://wa.me/5358125228?text=Hola%20quiero%20activar%20SINFON%20mi%20TX%20hash%20es:%20" target="_blank" class="whatsapp-btn">ENVIAR TX POR WHATSAPP</a>
 </div>
 </div>
-<footer>SINFON - Tecnologia avanzada de IA</footer>
+
+<footer>SINFON - Hecho en Cuba - Tecnologia avanzada de IA</footer>
+
 <script>
 var MODEL_SIZE=320;
 var session=null;
@@ -154,14 +170,12 @@ var resultUrl=null;
 var $=function(id){return document.getElementById(id)};
 var MODEL_URL="https://huggingface.co/neural-architect-dev/sinfon-model/resolve/main/u2net.onnx";
 
-// Borrar Service Workers viejos
 if("serviceWorker" in navigator){
   navigator.serviceWorker.getRegistrations().then(function(regs){
     for(var i=0;i<regs.length;i++){regs[i].unregister()}
   });
 }
 
-// Slider
 (function(){
 var c=$("sliderContainer"),l=$("sliderLine"),h=$("sliderHandle"),a=$("afterImg"),d=false;
 function m(x){var r=c.getBoundingClientRect();var p=Math.max(0,Math.min(100,((x-r.left)/r.width)*100));l.style.left=p+"%";h.style.left=p+"%";a.style.clipPath="inset(0 0 0 "+p+"%)"}
@@ -184,7 +198,6 @@ else if(!photoReady)$("status").textContent="Selecciona una foto primero";
 }}
 }
 
-// OPFS - almacenamiento permanente del navegador
 function saveModelToOPFS(buffer){
   if(navigator.storage && navigator.storage.getDirectory){
     return navigator.storage.getDirectory().then(function(root){
