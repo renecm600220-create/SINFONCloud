@@ -7,6 +7,10 @@
 <meta name="description" content="Quita el fondo de fotos con IA. Sin internet. Gratis. Para siempre.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Source+Serif+4:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.0/dist/ort.min.js"></script>
+<script>
+ort.env.wasm.wasmPaths="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.0/dist/";
+</script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{--bg:#08080c;--surface:#111118;--accent:#00d4ff;--text:#f0ece4;--muted:#6a6560}
@@ -149,9 +153,8 @@ footer{text-align:center;padding:30px 16px;color:var(--muted);font-size:12px;bor
 
 <footer>SINFON &mdash; Hecho en Cuba &mdash; IA que corre en tu dispositivo</footer>
 
-<script type="module">
-import {removeBackground} from "https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.5.5/+esm";
-
+<script>
+(function(){
 var uploadZone=document.getElementById("uploadZone");
 var fileInput=document.getElementById("fileInput");
 var previewArea=document.getElementById("previewArea");
@@ -163,7 +166,9 @@ var resultImg=document.getElementById("resultImg");
 var errorBox=document.getElementById("errorBox");
 var errorMsg=document.getElementById("errorMsg");
 var resultBlob=null;
-var MAX_SIZE=1024;
+var ortSession=null;
+var MAX_SIZE=800;
+var MODEL_SIZE=384;
 
 function showError(msg){errorBox.style.display="block";errorMsg.textContent=msg;processing.style.display="none"}
 function hideError(){errorBox.style.display="none"}
@@ -179,48 +184,128 @@ resultArea.style.display="none";
 processStatus.textContent="Preparando foto...";
 processing.style.display="block";
 
+var canvas=document.createElement("canvas");
+var ctx=canvas.getContext("2d");
 var img=new Image();
 img.onload=function(){
 try{
-var canvas=document.createElement("canvas");
 var w=img.width,h=img.height;
 if(w>MAX_SIZE||h>MAX_SIZE){
 if(w>h){h=Math.round(h*MAX_SIZE/w);w=MAX_SIZE}
 else{w=Math.round(w*MAX_SIZE/h);h=MAX_SIZE}
 }
 canvas.width=w;canvas.height=h;
-var ctx=canvas.getContext("2d");
 ctx.drawImage(img,0,0,w,h);
 previewImg.src=canvas.toDataURL("image/jpeg",0.8);
-
-canvas.toBlob(function(blob){
-if(!blob){showError("No se pudo preparar foto");return}
-processStatus.textContent="Descargando modelo IA (primera vez ~40MB)...";
-removeBackground(blob,{
-model:"medium",
-progress:function(current,total){
-if(total>0){processStatus.textContent="Descargando IA... "+Math.round(current*100/total)+"%"}
-else{processStatus.textContent="Descargando IA... "+Math.round(current/1048576)+"MB"}
-}
-}).then(function(resultBlob2){
-resultBlob=resultBlob2;
-resultImg.src=URL.createObjectURL(resultBlob2);
-processing.style.display="none";
-resultArea.style.display="block";
-}).catch(function(e){
-console.error("Error:",e);
-showError("Procesando: "+String(e));
-uploadZone.style.display="block";
-});
-},"image/jpeg",0.9);
-}catch(e){showError("Foto: "+String(e));uploadZone.style.display="block"}
+loadModel().then(function(){return runInference(canvas,w,h)}).then(function(){processing.style.display="none"}).catch(function(e){console.error(e);showError(String(e));uploadZone.style.display="block"});
+}catch(e){showError("Imagen: "+String(e));uploadZone.style.display="block"}
 };
 img.onerror=function(){showError("No se pudo cargar imagen");uploadZone.style.display="block";processing.style.display="none"};
 img.src=URL.createObjectURL(file);
 }
 
+function loadModel(){
+if(ortSession)return Promise.resolve();
+processStatus.textContent="Descargando IA (96MB)...";
+return fetch("./sinfon_cloud.onnx").then(function(r){
+if(!r.ok)throw new Error("HTTP "+r.status);
+var loaded=0;
+var total=parseInt(r.headers.get("content-length"))||0;
+var reader=r.body.getReader();
+var chunks=[];
+function pump(){
+return reader.read().then(function(result){
+if(result.done){
+var buf=new Uint8Array(loaded);
+var off=0;
+for(var i=0;i<chunks.length;i++){buf.set(chunks[i],off);off+=chunks[i].length}
+processStatus.textContent="Cargando modelo InSPyReNet...";
+return ort.InferenceSession.create(buf.buffer,{executionProviders:["wasm"],graphOptimizationLevel:"all"});
+}
+chunks.push(result.value);
+loaded+=result.value.length;
+if(total>0){processStatus.textContent="Descargando IA... "+Math.round(loaded*100/total)+"%"}
+else{processStatus.textContent="Descargando IA... "+Math.round(loaded/1048576)+"MB"}
+return pump();
+});
+}
+return pump();
+}).then(function(s){
+ortSession=s;
+processStatus.textContent="IA lista";
+}).catch(function(e){throw new Error("IA: "+String(e))});
+}
+
+function runInference(canvas,w,h){
+processStatus.textContent="Procesando con InSPyReNet...";
+var inputCanvas=document.createElement("canvas");
+inputCanvas.width=MODEL_SIZE;inputCanvas.height=MODEL_SIZE;
+var inputCtx=inputCanvas.getContext("2d");
+inputCtx.drawImage(canvas,0,0,MODEL_SIZE,MODEL_SIZE);
+var imageData=inputCtx.getImageData(0,0,MODEL_SIZE,MODEL_SIZE);
+var px=imageData.data;
+
+var mean=[0.485,0.456,0.406];
+var std=[0.229,0.224,0.225];
+var input=new Float32Array(3*MODEL_SIZE*MODEL_SIZE);
+for(var i=0;i<MODEL_SIZE*MODEL_SIZE;i++){
+input[i]=(px[i*4]/255.0-mean[0])/std[0];
+input[MODEL_SIZE*MODEL_SIZE+i]=(px[i*4+1]/255.0-mean[1])/std[1];
+input[2*MODEL_SIZE*MODEL_SIZE+i]=(px[i*4+2]/255.0-mean[2])/std[2];
+}
+
+var tensor=new ort.Tensor("float32",input,[1,3,MODEL_SIZE,MODEL_SIZE]);
+var feeds={};
+feeds[ortSession.inputNames[0]]=tensor;
+
+return ortSession.run(feeds).then(function(results){
+processStatus.textContent="Generando mascara...";
+var outName=ortSession.outputNames[ortSession.outputNames.length-1];
+var out=results[outName];
+if(!out)throw new Error("Sin resultado");
+var mask=out.data;
+var shape=out.dims;
+var mH=shape[shape.length-2],mW=shape[shape.length-1];
+
+var maxV=-Infinity,minV=Infinity;
+for(var i=0;i<mH*mW;i++){
+if(mask[i]>maxV)maxV=mask[i];
+if(mask[i]<minV)minV=mask[i];
+}
+var range=maxV-minV;
+if(range<0.001)range=1;
+
+var outCanvas=document.createElement("canvas");
+outCanvas.width=w;outCanvas.height=h;
+var oCtx=outCanvas.getContext("2d");
+oCtx.drawImage(canvas,0,0,w,h);
+var imgD=oCtx.getImageData(0,0,w,h);
+var totalPixels=w*h;
+
+for(var i=0;i<totalPixels;i++){
+var x=i%w;
+var y=Math.floor(i/w);
+var mx=Math.floor(x*mW/w);
+var my=Math.floor(y*mH/h);
+var val=(mask[my*mW+mx]-minV)/range;
+var alpha=Math.max(0,Math.min(255,Math.round(val*255)));
+imgD.data[i*4+3]=alpha;
+}
+oCtx.putImageData(imgD,0,0);
+
+outCanvas.toBlob(function(blob){
+if(!blob)throw new Error("No se pudo crear resultado");
+resultBlob=blob;
+resultImg.src=URL.createObjectURL(blob);
+processing.style.display="none";
+resultArea.style.display="block";
+},"image/png");
+});
+}
+
 window.downloadResult=function(){if(!resultBlob)return;var a=document.createElement("a");a.href=URL.createObjectURL(resultBlob);a.download="SINFON_result.png";a.click()};
 window.resetCloud=function(){uploadZone.style.display="block";previewArea.style.display="none";processing.style.display="none";resultArea.style.display="none";errorBox.style.display="none";fileInput.value="";resultBlob=null};
+})();
 </script>
 </body>
 </html>
