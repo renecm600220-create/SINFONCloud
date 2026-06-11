@@ -2,3 +2,5 @@ gradio
 transparent-background
 Pillow
 numpy
+torch
+torchvision

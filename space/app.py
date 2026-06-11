@@ -1,23 +1,24 @@
 import gradio as gr
 from transparent_background import Remover
 from PIL import Image
-import io
+import numpy as np
 
-print("Cargando modelo InSPyReNet...")
+print("Cargando InSPyReNet...")
 remover = Remover(mode='base')
-print("Modelo listo")
+print("Listo")
 
 def remove_bg(image):
+    if image is None:
+        return None
     img = Image.fromarray(image).convert("RGB")
-    out = remover.process(img, type="rgba")
+    out = remover.process(img, type='rgba')
     return out
 
-demo = gr.Interface(
-    fn=remove_bg,
-    inputs=gr.Image(type="numpy"),
-    outputs=gr.Image(type="pil"),
-    title="SINFON Cloud",
-    description="Recorte de fotos con IA"
-)
+with gr.Blocks(title="SINFON Cloud") as demo:
+    gr.Markdown("# SINFON CLOUD\n### Recorte de fotos con IA - Mismo motor que PC")
+    with gr.Row():
+        inp = gr.Image(type="numpy", label="Foto")
+        out = gr.Image(type="pil", image_mode="RGBA", label="Sin fondo")
+    inp.change(fn=remove_bg, inputs=inp, outputs=out)
 
 demo.launch()

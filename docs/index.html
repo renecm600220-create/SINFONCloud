@@ -7,6 +7,7 @@
 <meta name="description" content="Quita el fondo de fotos con IA. Sin internet. Gratis. Para siempre.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Source+Serif+4:wght@400;600&display=swap" rel="stylesheet">
+<script type="module" src="https://cdn.jsdelivr.net/npm/@gradio/client/dist/index.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{--bg:#08080c;--surface:#111118;--accent:#00d4ff;--text:#f0ece4;--muted:#6a6560}
@@ -150,7 +151,7 @@ footer{text-align:center;padding:30px 16px;color:var(--muted);font-size:12px;bor
 <footer>SINFON &mdash; Hecho en Cuba &mdash; IA que corre en tu dispositivo</footer>
 
 <script>
-var API_URL="https://neural-architect-dev-sinfon.hf.space/api/predict";
+var SPACE_URL="https://neural-architect-dev-sinfon.hf.space";
 var uploadZone=document.getElementById("uploadZone");
 var fileInput=document.getElementById("fileInput");
 var previewArea=document.getElementById("previewArea");
@@ -181,47 +182,36 @@ previewImg.src=URL.createObjectURL(file);
 var reader=new FileReader();
 reader.onload=function(){
 processStatus.textContent="Procesando con InSPyReNet...";
-var data=reader.result;
+var dataUrl=reader.result;
 
-var xhr=new XMLHttpRequest();
-xhr.open("POST",API_URL,true);
-xhr.setRequestHeader("Content-Type","application/json");
-xhr.responseType="json";
-xhr.onload=function(){
-if(xhr.status===200){
-try{
-var data2=xhr.response;
-var imgData;
-if(data2&&data2.data&&data2.data.length>0){
-if(typeof data2.data[0]==="string"&&data2.data[0].startsWith("data:")){
-imgData=data2.data[0];
-}else if(typeof data2.data[0]==="string"){
-imgData="data:image/png;base64,"+data2.data[0];
-}else{
-imgData=data2.data[0];
-}
+fetch(dataUrl).then(function(r){return r.blob()}).then(function(blob){
+var fd=new FormData();
+fd.append("data",blob,"photo.jpg");
+
+return fetch(SPACE_URL+"/api/predict",{method:"POST",body:fd});
+}).then(function(r){
+if(!r.ok)throw new Error("Servidor: "+r.status);
+return r.json();
+}).then(function(json){
+if(json&&json.data&&json.data.length>0){
+var imgData=json.data[0];
+if(typeof imgData==="object"&&imgData.url){
+resultImg.src=imgData.url;
+fetch(imgData.url).then(function(r){return r.blob()}).then(function(b){resultBlob=b});
+}else if(typeof imgData==="string"){
 resultImg.src=imgData;
+fetch(imgData).then(function(r){return r.blob()}).then(function(b){resultBlob=b});
+}
 processing.style.display="none";
 resultArea.style.display="block";
-fetch(imgData).then(function(r){return r.blob()}).then(function(b){resultBlob=b});
 }else{
-showError("Respuesta vacia del servidor");
-uploadZone.style.display="block";
+throw new Error("Respuesta vacia");
 }
-}catch(e){
-showError("Error procesando respuesta: "+String(e));
+}).catch(function(e){
+console.error("Error:",e);
+showError("Error: "+String(e));
 uploadZone.style.display="block";
-}
-}else{
-showError("Error del servidor: "+xhr.status);
-uploadZone.style.display="block";
-}
-};
-xhr.onerror=function(){
-showError("No se pudo conectar al servidor. Intenta de nuevo.");
-uploadZone.style.display="block";
-};
-xhr.send(JSON.stringify({data:[data]}));
+});
 };
 reader.readAsDataURL(file);
 }
