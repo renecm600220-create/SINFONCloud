@@ -236,8 +236,6 @@ processStatus.textContent="IA lista";
 }).catch(function(e){throw new Error("IA: "+String(e))});
 }
 
-function sigmoid(x){return 1.0/(1.0+Math.exp(-x))}
-
 function runInference(canvas,w,h){
 processStatus.textContent="Procesando con IA...";
 var inputCanvas=document.createElement("canvas");
@@ -261,22 +259,20 @@ feeds[ortSession.inputNames[0]]=tensor;
 return ortSession.run(feeds).then(function(results){
 processStatus.textContent="Generando mascara...";
 
-var out1959=results["1959"];
-var out1965=results["1965"];
-if(!out1959||!out1965)throw new Error("Sin resultado");
-
-var mask1=out1959.data;
-var mask7=out1965.data;
-var shape=out1959.dims;
+var out=results["1959"];
+if(!out)throw new Error("Sin resultado");
+var mask=out.data;
+var shape=out.dims;
 var mH=shape[shape.length-2],mW=shape[shape.length-1];
 var total=mH*mW;
 
-var mask=new Float32Array(total);
+var maxV=-Infinity,minV=Infinity;
 for(var i=0;i<total;i++){
-var s1=sigmoid(mask1[i]);
-var s7=sigmoid(mask7[i]);
-mask[i]=Math.max(s1,s7);
+if(mask[i]>maxV)maxV=mask[i];
+if(mask[i]<minV)minV=mask[i];
 }
+var range=maxV-minV;
+if(range<0.001)range=1;
 
 var outCanvas=document.createElement("canvas");
 outCanvas.width=w;outCanvas.height=h;
@@ -290,7 +286,7 @@ var x=i%w;
 var y=Math.floor(i/w);
 var mx=Math.floor(x*mW/w);
 var my=Math.floor(y*mH/h);
-var val=mask[my*mW+mx];
+var val=(mask[my*mW+mx]-minV)/range;
 var alpha=Math.max(0,Math.min(255,Math.round(val*255)));
 imgD.data[i*4+3]=alpha;
 }
