@@ -195,8 +195,9 @@ previewImg.src=canvas.toDataURL("image/jpeg",0.8);
 
 canvas.toBlob(function(blob){
 if(!blob){showError("No se pudo preparar foto");return}
-processStatus.textContent="Descargando modelo IA (primera vez)...";
+processStatus.textContent="Descargando modelo IA (primera vez ~40MB)...";
 removeBackground(blob,{
+model:"medium",
 progress:function(current,total){
 if(total>0){processStatus.textContent="Descargando IA... "+Math.round(current*100/total)+"%"}
 else{processStatus.textContent="Descargando IA... "+Math.round(current/1048576)+"MB"}
