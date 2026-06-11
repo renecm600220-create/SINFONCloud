@@ -247,14 +247,6 @@ var mask=out.data;
 var shape=out.dims;
 var mH=shape[shape.length-2],mW=shape[shape.length-1];
 
-var maxV=-Infinity,minV=Infinity;
-for(var i=0;i<mH*mW;i++){
-if(mask[i]>maxV)maxV=mask[i];
-if(mask[i]<minV)minV=mask[i];
-}
-var range=maxV-minV;
-if(range<0.001)range=1;
-
 var outCanvas=document.createElement("canvas");
 outCanvas.width=w;outCanvas.height=h;
 var oCtx=outCanvas.getContext("2d");
@@ -265,9 +257,7 @@ for(var y=0;y<h;y++){
 for(var x=0;x<w;x++){
 var mx=Math.floor(x*mW/w);
 var my=Math.floor(y*mH/h);
-var val=(mask[my*mW+mx]-minV)/range;
-if(val>0.5){val=1.0}
-else{val=val*2.0}
+var val=mask[my*mW+mx];
 var alpha=Math.max(0,Math.min(255,Math.round(val*255)));
 imgD.data[(y*w+x)*4+3]=alpha;
 }
