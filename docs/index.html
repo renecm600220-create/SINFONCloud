@@ -219,6 +219,8 @@ processStatus.textContent="IA lista";
 }).catch(function(e){throw new Error("IA: "+String(e))});
 }
 
+function sigmoid(x){return 1.0/(1.0+Math.exp(-x))}
+
 function runInference(canvas,w,h){
 processStatus.textContent="Procesando con IA...";
 var inputCanvas=document.createElement("canvas");
@@ -241,26 +243,48 @@ feeds[ortSession.inputNames[0]]=tensor;
 
 return ortSession.run(feeds).then(function(results){
 processStatus.textContent="Generando mascara...";
-var out=results["1965"];
-if(!out)throw new Error("Sin resultado");
-var mask=out.data;
-var shape=out.dims;
-var mH=shape[shape.length-2],mW=shape[shape.length-1];
+
+var outNames=["1959","1960","1961","1962","1963","1964","1965"];
+var bestMask=null;
+var bestRange=0;
+
+for(var n=0;n<outNames.length;n++){
+var o=results[outNames[n]];
+if(!o)continue;
+var d=o.data;
+var mx=-Infinity,mn=Infinity;
+for(var i=0;i<d.length;i++){
+if(d[i]>mx)mx=d[i];
+if(d[i]<mn)mn=d[i];
+}
+var r=mx-mn;
+if(r>bestRange){bestRange=r;bestMask=d}
+}
+
+if(!bestMask)throw new Error("Sin resultado");
 
 var outCanvas=document.createElement("canvas");
 outCanvas.width=w;outCanvas.height=h;
 var oCtx=outCanvas.getContext("2d");
 oCtx.drawImage(canvas,0,0,w,h);
 var imgD=oCtx.getImageData(0,0,w,h);
+var totalPixels=w*h;
 
-for(var y=0;y<h;y++){
-for(var x=0;x<w;x++){
-var mx=Math.floor(x*mW/w);
-var my=Math.floor(y*mH/h);
-var val=mask[my*mW+mx];
-var alpha=Math.max(0,Math.min(255,Math.round(val*255)));
-imgD.data[(y*w+x)*4+3]=alpha;
-}
+var outH=MODEL_SIZE;
+var outW=MODEL_SIZE;
+
+for(var i=0;i<totalPixels;i++){
+var x=i%w;
+var y=Math.floor(i/w);
+var mx=Math.floor(x*outW/w);
+var my=Math.floor(y*outH/h);
+var val=bestMask[my*outW+mx];
+var sig=sigmoid(val);
+var alpha;
+if(sig<0.15)alpha=0;
+else if(sig>0.5)alpha=255;
+else alpha=Math.round(((sig-0.15)/0.35)*255);
+imgD.data[i*4+3]=alpha;
 }
 oCtx.putImageData(imgD,0,0);
 
