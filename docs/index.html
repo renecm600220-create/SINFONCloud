@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>SINFON - Recorte de Fotos con IA</title>
+<meta name="description" content="Quita el fondo de fotos con IA. Sin internet. Gratis. Para siempre.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Source+Serif+4:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.0/dist/ort.min.js"></script>
+<script>
+ort.env.wasm.wasmPaths="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.0/dist/";
+</script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#08080c;--surface:#111118;--accent:#00d4ff;--text:#f0ece4;--muted:#6a6560}
+body{background:var(--bg);color:var(--text);font-family:'Source Serif 4',Georgia,serif;line-height:1.6}
+.hero{min-height:50vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px 20px;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(ellipse at 30% 40%,#001a2e 0%,transparent 50%),radial-gradient(ellipse at 70% 60%,#0a0020 0%,transparent 50%);animation:pulse 8s ease-in-out infinite alternate}
+@keyframes pulse{from{opacity:.6}to{opacity:1}}
+h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(40px,10vw,80px);letter-spacing:12px;color:var(--text);position:relative;z-index:1}
+h1 span{color:var(--accent)}
+.tagline{font-size:clamp(14px,3vw,20px);color:var(--muted);margin:8px 0;position:relative;z-index:1}
+.badge{display:inline-block;background:var(--accent);color:#000;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:4px;padding:10px 28px;border-radius:8px;margin:16px 0;position:relative;z-index:1;cursor:pointer;animation:glow 2s ease-in-out infinite alternate}
+@keyframes glow{from{box-shadow:0 0 10px rgba(0,212,255,.3)}to{box-shadow:0 0 30px rgba(0,212,255,.6)}}
+.free-tag{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:6px;color:var(--accent);position:relative;z-index:1;margin-top:8px}
+.btn-group{display:flex;gap:12px;margin-top:16px;position:relative;z-index:1;flex-wrap:wrap;justify-content:center}
+.btn-cloud{display:inline-block;background:var(--accent);color:#000;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:4px;padding:14px 36px;border-radius:12px;text-decoration:none;box-shadow:0 0 20px rgba(0,212,255,.4);animation:glow 2s ease-in-out infinite alternate;transition:transform .2s;cursor:pointer;border:none}
+.btn-cloud:hover{transform:scale(1.05)}
+.btn-download{display:inline-block;background:transparent;color:var(--accent);font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:3px;padding:12px 28px;border-radius:12px;border:2px solid var(--accent);text-decoration:none;transition:all .2s}
+.btn-download:hover{background:var(--accent);color:#000}
+.features{display:flex;gap:16px;max-width:900px;margin:0 auto;padding:0 20px 30px;flex-wrap:wrap;justify-content:center}
+.feature{background:var(--surface);border:1px solid #1a1a24;border-radius:12px;padding:24px;text-align:center;flex:1;min-width:200px;max-width:280px}
+.feature h3{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:3px;color:var(--accent);margin-bottom:8px}
+.feature p{font-size:13px;color:var(--muted)}
+.cloud-section{max-width:500px;margin:0 auto;padding:20px 16px}
+.cloud-title{font-family:'Bebas Neue',sans-serif;font-size:36px;letter-spacing:8px;text-align:center;color:var(--text);margin-bottom:4px}
+.cloud-sub{font-size:14px;color:var(--muted);text-align:center;margin-bottom:16px}
+.upload-zone{border:2px dashed #2a2a34;border-radius:16px;padding:40px 20px;text-align:center;cursor:pointer;transition:all .3s;background:var(--surface)}
+.upload-zone:hover{border-color:var(--accent);background:rgba(0,212,255,.03)}
+.upload-zone input{display:none}
+.upload-icon{font-size:48px;margin-bottom:8px}
+.upload-text{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:4px;color:var(--text)}
+.upload-hint{font-size:12px;color:var(--muted);margin-top:4px}
+.preview-area{display:none;margin-top:16px;text-align:center}
+.preview-area img{max-width:100%;max-height:300px;border-radius:12px}
+.processing{text-align:center;padding:20px;display:none}
+.spinner{width:40px;height:40px;border:3px solid #1a1a24;border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto}
+@keyframes spin{to{transform:rotate(360deg)}}
+.processing p{margin-top:8px;color:var(--muted);font-size:14px}
+.result-area{display:none;text-align:center;margin-top:16px}
+.result-area img{max-width:100%;max-height:300px;border-radius:12px}
+.result-actions{display:flex;gap:10px;justify-content:center;margin-top:12px;flex-wrap:wrap}
+.result-btn{background:var(--accent);color:#000;font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:3px;padding:10px 24px;border-radius:10px;border:none;cursor:pointer;transition:transform .2s}
+.result-btn:hover{transform:scale(1.05)}
+.result-btn.secondary{background:transparent;color:var(--accent);border:2px solid var(--accent)}
+.error-box{display:none;background:#2a0000;border:1px solid #ff4444;border-radius:12px;padding:16px;margin-top:16px;text-align:center}
+.error-box p{color:#ff6666;font-size:13px;word-break:break-all}
+.error-box .error-title{color:#ff4444;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:3px;margin-bottom:8px}
+.comparison{max-width:500px;margin:30px auto;padding:0 16px}
+.comp-title{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:6px;text-align:center;color:var(--text);margin-bottom:12px}
+.comp-table{width:100%;border-collapse:collapse}
+.comp-table th,.comp-table td{padding:10px;text-align:center;border-bottom:1px solid #1a1a24;font-size:13px}
+.comp-table th{font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:2px;color:var(--accent)}
+.comp-table td:first-child{text-align:left;font-weight:600}
+.check{color:#4ade80}.cross{color:#ef4444}
+.cta{background:var(--surface);border-radius:20px;padding:40px 24px;max-width:420px;margin:0 auto;text-align:center;border:1px solid #1a1a24}
+.cta h2{font-family:'Bebas Neue',sans-serif;font-size:36px;letter-spacing:6px;color:var(--text);margin-bottom:8px}
+.cta .price{font-size:48px;color:var(--accent);font-family:'Bebas Neue',sans-serif;margin:8px 0}
+.download-btn{display:inline-block;background:var(--accent);color:#000;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:4px;padding:14px 40px;border-radius:12px;margin-top:16px;text-decoration:none;box-shadow:0 0 20px rgba(0,212,255,.4);cursor:pointer;animation:glow 2s ease-in-out infinite alternate;transition:transform .2s}
+.download-btn:hover{transform:scale(1.05)}
+.install-note{font-size:12px;color:var(--muted);margin-top:12px;background:rgba(255,255,255,.03);padding:10px;border-radius:8px}
+.install-note b{color:var(--accent)}
+footer{text-align:center;padding:30px 16px;color:var(--muted);font-size:12px;border-top:1px solid #1a1a24;margin-top:40px}
+</style>
+</head>
+<body>
+
+<section class="hero">
+<h1>SIN<span>FON</span></h1>
+<div class="tagline">Recorte de fotos con IA</div>
+<div class="free-tag">100% GRATIS</div>
+<div class="btn-group">
+<a href="#cloud" class="btn-cloud">SINFON CLOUD</a>
+<a href="#download" class="btn-download">DESCARGAR PC</a>
+</div>
+</section>
+
+<div class="features">
+<div class="feature"><h3>SIN INTERNET</h3><p>La IA corre en tu dispositivo. Tus fotos nunca salen de tu computadora.</p></div>
+<div class="feature"><h3>CALIDAD PROFESIONAL</h3><p>Elimina fondos de personas con un solo clic.</p></div>
+<div class="feature"><h3>PARA SIEMPRE</h3><p>Sin suscripciones. Sin renovaciones. Sin limites.</p></div>
+</div>
+
+<section class="cloud-section" id="cloud">
+<div class="cloud-title">SINFON CLOUD</div>
+<div class="cloud-sub">Usa SINFON desde tu celular — sin descargar nada</div>
+
+<div class="upload-zone" id="uploadZone">
+<input type="file" id="fileInput" accept="image/*">
+<div class="upload-icon">&#128247;</div>
+<div class="upload-text">SELECCIONA UNA FOTO</div>
+<div class="upload-hint">Toca aqui para elegir una imagen</div>
+</div>
+
+<div class="preview-area" id="previewArea">
+<img id="previewImg" src="" alt="Preview">
+</div>
+
+<div class="processing" id="processing">
+<div class="spinner"></div>
+<p id="processStatus">Cargando IA...</p>
+</div>
+
+<div class="result-area" id="resultArea">
+<img id="resultImg" src="" alt="Resultado">
+<div class="result-actions">
+<button class="result-btn" onclick="downloadResult()">DESCARGAR PNG</button>
+<button class="result-btn secondary" onclick="resetCloud()">OTRA FOTO</button>
+</div>
+</div>
+
+<div class="error-box" id="errorBox">
+<div class="error-title">ERROR</div>
+<p id="errorMsg"></p>
+</div>
+</section>
+
+<div class="comparison">
+<div class="comp-title">COMPARACION</div>
+<table class="comp-table">
+<tr><th></th><th>SINFON</th><th>remove.bg</th><th>Photoshop</th></tr>
+<tr><td>Sin internet</td><td class="check">&#10003;</td><td class="cross">&#10007;</td><td class="check">&#10003;</td></tr>
+<tr><td>Gratis</td><td class="check">&#10003;</td><td class="cross">$0.20/foto</td><td class="cross">$20/mes</td></tr>
+<tr><td>Privacidad total</td><td class="check">&#10003;</td><td class="cross">&#10007;</td><td class="check">&#10003;</td></tr>
+<tr><td>Fotos ilimitadas</td><td class="check">&#10003;</td><td class="cross">&#10007;</td><td class="check">&#10003;</td></tr>
+<tr><td>Facil de usar</td><td class="check">&#10003;</td><td class="check">&#10003;</td><td class="cross">&#10007;</td></tr>
+</table>
+</div>
+
+<section class="cta" id="download">
+<h2>SINFON v1.0.0</h2>
+<p style="color:var(--muted);font-size:14px">Recorte de fotos con IA para Windows</p>
+<div class="price">GRATIS</div>
+<p style="font-size:13px;color:var(--accent)">Para siempre — Sin registro — Sin limites</p>
+<a href="https://drive.google.com/uc?export=download&id=1lOmloGyTZZXdbkw25wrEgrSEFnhzZA_l" target="_blank" class="download-btn">DESCARGAR SINFON</a>
+<div class="install-note">
+<b>Como instalar:</b><br>
+1. Descarga el archivo ZIP<br>
+2. Clic derecho &rarr; Extraer todo<br>
+3. Abre la carpeta &rarr; doble clic en <b>SINFON Setup 1.0.0.exe</b><br>
+4. Si Windows bloquea &rarr; <b>Mas informacion &rarr; Ejecutar de todas formas</b>
+</div>
+</section>
+
+<footer>SINFON &mdash; Hecho en Cuba &mdash; IA que corre en tu dispositivo</footer>
+
+<script>
+(function(){
+var uploadZone=document.getElementById("uploadZone");
+var fileInput=document.getElementById("fileInput");
+var previewArea=document.getElementById("previewArea");
+var previewImg=document.getElementById("previewImg");
+var processing=document.getElementById("processing");
+var processStatus=document.getElementById("processStatus");
+var resultArea=document.getElementById("resultArea");
+var resultImg=document.getElementById("resultImg");
+var errorBox=document.getElementById("errorBox");
+var errorMsg=document.getElementById("errorMsg");
+var resultBlob=null;
+var ortSession=null;
+var MAX_SIZE=800;
+var MODEL_SIZE=320;
+
+function showError(msg){errorBox.style.display="block";errorMsg.textContent=msg;processing.style.display="none"}
+function hideError(){errorBox.style.display="none"}
+
+uploadZone.addEventListener("click",function(){fileInput.click()});
+fileInput.addEventListener("change",function(){if(fileInput.files.length>0)handleFile(fileInput.files[0])});
+
+function handleFile(file){
+hideError();
+uploadZone.style.display="none";
+previewArea.style.display="block";
+resultArea.style.display="none";
+processStatus.textContent="Preparando foto...";
+processing.style.display="block";
+
+var canvas=document.createElement("canvas");
+var ctx=canvas.getContext("2d");
+var img=new Image();
+img.onload=function(){
+try{
+var w=img.width,h=img.height;
+if(w>MAX_SIZE||h>MAX_SIZE){
+if(w>h){h=Math.round(h*MAX_SIZE/w);w=MAX_SIZE}
+else{w=Math.round(w*MAX_SIZE/h);h=MAX_SIZE}
+}
+canvas.width=w;canvas.height=h;
+ctx.drawImage(img,0,0,w,h);
+previewImg.src=canvas.toDataURL("image/jpeg",0.8);
+loadModel().then(function(){return runInference(canvas,w,h)}).then(function(){processing.style.display="none"}).catch(function(e){console.error(e);showError(String(e));uploadZone.style.display="block"});
+}catch(e){showError("Imagen: "+String(e));uploadZone.style.display="block"}
+};
+img.onerror=function(){showError("No se pudo cargar imagen");uploadZone.style.display="block";processing.style.display="none"};
+img.src=URL.createObjectURL(file);
+}
+
+function loadModel(){
+if(ortSession)return Promise.resolve();
+processStatus.textContent="Descargando IA (4MB)...";
+return fetch("./u2netp.onnx").then(function(r){
+if(!r.ok)throw new Error("HTTP "+r.status);
+return r.arrayBuffer();
+}).then(function(buf){
+processStatus.textContent="Cargando modelo...";
+return ort.InferenceSession.create(buf,{executionProviders:["wasm"],graphOptimizationLevel:"all"});
+}).then(function(s){
+ortSession=s;
+processStatus.textContent="IA lista";
+}).catch(function(e){throw new Error("IA: "+String(e))});
+}
+
+function runInference(canvas,w,h){
+processStatus.textContent="Procesando con IA...";
+var inputCanvas=document.createElement("canvas");
+inputCanvas.width=MODEL_SIZE;inputCanvas.height=MODEL_SIZE;
+var inputCtx=inputCanvas.getContext("2d");
+inputCtx.drawImage(canvas,0,0,MODEL_SIZE,MODEL_SIZE);
+var imageData=inputCtx.getImageData(0,0,MODEL_SIZE,MODEL_SIZE);
+var px=imageData.data;
+
+var input=new Float32Array(3*MODEL_SIZE*MODEL_SIZE);
+for(var i=0;i<MODEL_SIZE*MODEL_SIZE;i++){
+input[i]=px[i*4]/255.0;
+input[MODEL_SIZE*MODEL_SIZE+i]=px[i*4+1]/255.0;
+input[2*MODEL_SIZE*MODEL_SIZE+i]=px[i*4+2]/255.0;
+}
+
+var tensor=new ort.Tensor("float32",input,[1,3,MODEL_SIZE,MODEL_SIZE]);
+var feeds={};
+feeds[ortSession.inputNames[0]]=tensor;
+
+return ortSession.run(feeds).then(function(results){
+processStatus.textContent="Generando mascara...";
+
+var out1959=results["1959"];
+var out1960=results["1960"];
+var out1961=results["1961"];
+var out1962=results["1962"];
+var out1963=results["1963"];
+var out1964=results["1964"];
+var out1965=results["1965"];
+
+var mask=out1965.data;
+var shape=out1965.dims;
+var mH=shape[shape.length-2],mW=shape[shape.length-1];
+
+var maxV=-Infinity,minV=Infinity;
+for(var i=0;i<mH*mW;i++){
+if(mask[i]>maxV)maxV=mask[i];
+if(mask[i]<minV)minV=mask[i];
+}
+
+var outCanvas=document.createElement("canvas");
+outCanvas.width=w;outCanvas.height=h;
+var oCtx=outCanvas.getContext("2d");
+oCtx.drawImage(canvas,0,0,w,h);
+var imgD=oCtx.getImageData(0,0,w,h);
+
+for(var y=0;y<h;y++){
+for(var x=0;x<w;x++){
+var mx=Math.floor(x*mW/w);
+var my=Math.floor(y*mH/h);
+var val=mask[my*mW+mx];
+var sig=1.0/(1.0+Math.exp(-val));
+var alpha;
+if(sig>0.5){alpha=255}
+else{alpha=Math.round(sig*2*255)}
+imgD.data[(y*w+x)*4+3]=alpha;
+}
+}
+oCtx.putImageData(imgD,0,0);
+
+outCanvas.toBlob(function(blob){
+if(!blob)throw new Error("No se pudo crear resultado");
+resultBlob=blob;
+resultImg.src=URL.createObjectURL(blob);
+processing.style.display="none";
+resultArea.style.display="block";
+},"image/png");
+});
+}
+
+window.downloadResult=function(){if(!resultBlob)return;var a=document.createElement("a");a.href=URL.createObjectURL(resultBlob);a.download="SINFON_result.png";a.click()};
+window.resetCloud=function(){uploadZone.style.display="block";previewArea.style.display="none";processing.style.display="none";resultArea.style.display="none";errorBox.style.display="none";fileInput.value="";resultBlob=null};
+})();
+</script>
+</body>
+</html>
