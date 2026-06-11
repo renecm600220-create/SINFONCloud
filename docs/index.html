@@ -21,8 +21,6 @@ body{background:var(--bg);color:var(--text);font-family:'Source Serif 4',Georgia
 h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(40px,10vw,80px);letter-spacing:12px;color:var(--text);position:relative;z-index:1}
 h1 span{color:var(--accent)}
 .tagline{font-size:clamp(14px,3vw,20px);color:var(--muted);margin:8px 0;position:relative;z-index:1}
-.badge{display:inline-block;background:var(--accent);color:#000;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:4px;padding:10px 28px;border-radius:8px;margin:16px 0;position:relative;z-index:1;cursor:pointer;animation:glow 2s ease-in-out infinite alternate}
-@keyframes glow{from{box-shadow:0 0 10px rgba(0,212,255,.3)}to{box-shadow:0 0 30px rgba(0,212,255,.6)}}
 .free-tag{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:6px;color:var(--accent);position:relative;z-index:1;margin-top:8px}
 .btn-group{display:flex;gap:12px;margin-top:16px;position:relative;z-index:1;flex-wrap:wrap;justify-content:center}
 .btn-cloud{display:inline-block;background:var(--accent);color:#000;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:4px;padding:14px 36px;border-radius:12px;text-decoration:none;box-shadow:0 0 20px rgba(0,212,255,.4);animation:glow 2s ease-in-out infinite alternate;transition:transform .2s;cursor:pointer;border:none}
@@ -243,17 +241,10 @@ feeds[ortSession.inputNames[0]]=tensor;
 
 return ortSession.run(feeds).then(function(results){
 processStatus.textContent="Generando mascara...";
-
-var out1959=results["1959"];
-var out1960=results["1960"];
-var out1961=results["1961"];
-var out1962=results["1962"];
-var out1963=results["1963"];
-var out1964=results["1964"];
-var out1965=results["1965"];
-
-var mask=out1965.data;
-var shape=out1965.dims;
+var out=results["1965"];
+if(!out)throw new Error("Sin resultado");
+var mask=out.data;
+var shape=out.dims;
 var mH=shape[shape.length-2],mW=shape[shape.length-1];
 
 var maxV=-Infinity,minV=Infinity;
@@ -261,6 +252,8 @@ for(var i=0;i<mH*mW;i++){
 if(mask[i]>maxV)maxV=mask[i];
 if(mask[i]<minV)minV=mask[i];
 }
+var range=maxV-minV;
+if(range<0.001)range=1;
 
 var outCanvas=document.createElement("canvas");
 outCanvas.width=w;outCanvas.height=h;
@@ -272,11 +265,10 @@ for(var y=0;y<h;y++){
 for(var x=0;x<w;x++){
 var mx=Math.floor(x*mW/w);
 var my=Math.floor(y*mH/h);
-var val=mask[my*mW+mx];
-var sig=1.0/(1.0+Math.exp(-val));
-var alpha;
-if(sig>0.5){alpha=255}
-else{alpha=Math.round(sig*2*255)}
+var val=(mask[my*mW+mx]-minV)/range;
+if(val>0.5){val=1.0}
+else{val=val*2.0}
+var alpha=Math.max(0,Math.min(255,Math.round(val*255)));
 imgD.data[(y*w+x)*4+3]=alpha;
 }
 }
