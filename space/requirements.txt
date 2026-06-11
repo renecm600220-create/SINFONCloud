@@ -1,0 +1,4 @@
+gradio
+transparent-background
+Pillow
+numpy
