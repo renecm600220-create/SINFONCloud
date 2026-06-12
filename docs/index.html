@@ -7,7 +7,6 @@
 <meta name="description" content="Quita el fondo de fotos con IA. Sin internet. Gratis. Para siempre.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Source+Serif+4:wght@400;600&display=swap" rel="stylesheet">
-<script type="module" src="https://cdn.jsdelivr.net/npm/@gradio/client/dist/index.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{--bg:#08080c;--surface:#111118;--accent:#00d4ff;--text:#f0ece4;--muted:#6a6560}
@@ -31,27 +30,8 @@ h1 span{color:var(--accent)}
 .cloud-section{max-width:500px;margin:0 auto;padding:20px 16px}
 .cloud-title{font-family:'Bebas Neue',sans-serif;font-size:36px;letter-spacing:8px;text-align:center;color:var(--text);margin-bottom:4px}
 .cloud-sub{font-size:14px;color:var(--muted);text-align:center;margin-bottom:16px}
-.upload-zone{border:2px dashed #2a2a34;border-radius:16px;padding:40px 20px;text-align:center;cursor:pointer;transition:all .3s;background:var(--surface)}
-.upload-zone:hover{border-color:var(--accent);background:rgba(0,212,255,.03)}
-.upload-zone input{display:none}
-.upload-icon{font-size:48px;margin-bottom:8px}
-.upload-text{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:4px;color:var(--text)}
-.upload-hint{font-size:12px;color:var(--muted);margin-top:4px}
-.preview-area{display:none;margin-top:16px;text-align:center}
-.preview-area img{max-width:100%;max-height:300px;border-radius:12px}
-.processing{text-align:center;padding:20px;display:none}
-.spinner{width:40px;height:40px;border:3px solid #1a1a24;border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto}
-@keyframes spin{to{transform:rotate(360deg)}}
-.processing p{margin-top:8px;color:var(--muted);font-size:14px}
-.result-area{display:none;text-align:center;margin-top:16px}
-.result-area img{max-width:100%;max-height:300px;border-radius:12px}
-.result-actions{display:flex;gap:10px;justify-content:center;margin-top:12px;flex-wrap:wrap}
-.result-btn{background:var(--accent);color:#000;font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:3px;padding:10px 24px;border-radius:10px;border:none;cursor:pointer;transition:transform .2s}
-.result-btn:hover{transform:scale(1.05)}
-.result-btn.secondary{background:transparent;color:var(--accent);border:2px solid var(--accent)}
-.error-box{display:none;background:#2a0000;border:1px solid #ff4444;border-radius:12px;padding:16px;margin-top:16px;text-align:center}
-.error-box p{color:#ff6666;font-size:13px;word-break:break-all}
-.error-box .error-title{color:#ff4444;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:3px;margin-bottom:8px}
+.space-frame{width:100%;border:2px solid #1a1a24;border-radius:16px;overflow:hidden;background:var(--surface)}
+.space-frame iframe{width:100%;height:600px;border:none;display:block}
 .comparison{max-width:500px;margin:30px auto;padding:0 16px}
 .comp-title{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:6px;text-align:center;color:var(--text);margin-bottom:12px}
 .comp-table{width:100%;border-collapse:collapse}
@@ -91,33 +71,8 @@ footer{text-align:center;padding:30px 16px;color:var(--muted);font-size:12px;bor
 <div class="cloud-title">SINFON CLOUD</div>
 <div class="cloud-sub">Usa SINFON desde tu celular — sin descargar nada</div>
 
-<div class="upload-zone" id="uploadZone">
-<input type="file" id="fileInput" accept="image/*">
-<div class="upload-icon">&#128247;</div>
-<div class="upload-text">SELECCIONA UNA FOTO</div>
-<div class="upload-hint">Toca aqui para elegir una imagen</div>
-</div>
-
-<div class="preview-area" id="previewArea">
-<img id="previewImg" src="" alt="Preview">
-</div>
-
-<div class="processing" id="processing">
-<div class="spinner"></div>
-<p id="processStatus">Procesando...</p>
-</div>
-
-<div class="result-area" id="resultArea">
-<img id="resultImg" src="" alt="Resultado">
-<div class="result-actions">
-<button class="result-btn" onclick="downloadResult()">DESCARGAR PNG</button>
-<button class="result-btn secondary" onclick="resetCloud()">OTRA FOTO</button>
-</div>
-</div>
-
-<div class="error-box" id="errorBox">
-<div class="error-title">ERROR</div>
-<p id="errorMsg"></p>
+<div class="space-frame">
+<iframe src="https://neural-architect-dev-sinfon.hf.space" allow="camera" scrolling="auto"></iframe>
 </div>
 </section>
 
@@ -149,75 +104,5 @@ footer{text-align:center;padding:30px 16px;color:var(--muted);font-size:12px;bor
 </section>
 
 <footer>SINFON &mdash; Hecho en Cuba &mdash; IA que corre en tu dispositivo</footer>
-
-<script>
-var SPACE_URL="https://neural-architect-dev-sinfon.hf.space";
-var uploadZone=document.getElementById("uploadZone");
-var fileInput=document.getElementById("fileInput");
-var previewArea=document.getElementById("previewArea");
-var previewImg=document.getElementById("previewImg");
-var processing=document.getElementById("processing");
-var processStatus=document.getElementById("processStatus");
-var resultArea=document.getElementById("resultArea");
-var resultImg=document.getElementById("resultImg");
-var errorBox=document.getElementById("errorBox");
-var errorMsg=document.getElementById("errorMsg");
-var resultBlob=null;
-
-function showError(msg){errorBox.style.display="block";errorMsg.textContent=msg;processing.style.display="none"}
-function hideError(){errorBox.style.display="none"}
-
-uploadZone.addEventListener("click",function(){fileInput.click()});
-fileInput.addEventListener("change",function(){if(fileInput.files.length>0)handleFile(fileInput.files[0])});
-
-function handleFile(file){
-hideError();
-uploadZone.style.display="none";
-previewArea.style.display="block";
-resultArea.style.display="none";
-processStatus.textContent="Subiendo foto...";
-processing.style.display="block";
-previewImg.src=URL.createObjectURL(file);
-
-var reader=new FileReader();
-reader.onload=function(){
-processStatus.textContent="Procesando con InSPyReNet...";
-var dataUrl=reader.result;
-
-fetch(dataUrl).then(function(r){return r.blob()}).then(function(blob){
-var fd=new FormData();
-fd.append("data",blob,"photo.jpg");
-
-return fetch(SPACE_URL+"/api/predict",{method:"POST",body:fd});
-}).then(function(r){
-if(!r.ok)throw new Error("Servidor: "+r.status);
-return r.json();
-}).then(function(json){
-if(json&&json.data&&json.data.length>0){
-var imgData=json.data[0];
-if(typeof imgData==="object"&&imgData.url){
-resultImg.src=imgData.url;
-fetch(imgData.url).then(function(r){return r.blob()}).then(function(b){resultBlob=b});
-}else if(typeof imgData==="string"){
-resultImg.src=imgData;
-fetch(imgData).then(function(r){return r.blob()}).then(function(b){resultBlob=b});
-}
-processing.style.display="none";
-resultArea.style.display="block";
-}else{
-throw new Error("Respuesta vacia");
-}
-}).catch(function(e){
-console.error("Error:",e);
-showError("Error: "+String(e));
-uploadZone.style.display="block";
-});
-};
-reader.readAsDataURL(file);
-}
-
-window.downloadResult=function(){if(!resultBlob)return;var a=document.createElement("a");a.href=URL.createObjectURL(resultBlob);a.download="SINFON_result.png";a.click()};
-window.resetCloud=function(){uploadZone.style.display="block";previewArea.style.display="none";processing.style.display="none";resultArea.style.display="none";errorBox.style.display="none";fileInput.value="";resultBlob=null};
-</script>
 </body>
 </html>
