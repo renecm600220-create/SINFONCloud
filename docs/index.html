@@ -18,12 +18,7 @@ h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(40px,10vw,80px);letter-sp
 h1 span{color:var(--accent)}
 .tagline{font-size:clamp(14px,3vw,20px);color:var(--muted);margin:8px 0;position:relative;z-index:1}
 .free-tag{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:6px;color:var(--accent);position:relative;z-index:1;margin-top:8px}
-.btn-group{display:flex;gap:12px;margin-top:16px;position:relative;z-index:1;flex-wrap:wrap;justify-content:center}
-.btn-cloud{display:inline-block;background:var(--accent);color:#000;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:4px;padding:14px 36px;border-radius:12px;text-decoration:none;box-shadow:0 0 20px rgba(0,212,255,.4);animation:glow 2s ease-in-out infinite alternate;transition:transform .2s;cursor:pointer;border:none}
-.btn-cloud:hover{transform:scale(1.05)}
-.btn-download{display:inline-block;background:transparent;color:var(--accent);font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:3px;padding:12px 28px;border-radius:12px;border:2px solid var(--accent);text-decoration:none;transition:all .2s}
-.btn-download:hover{background:var(--accent);color:#000}
-.features{display:flex;gap:16px;max-width:900px;margin:0 auto;padding:0 20px 30px;flex-wrap:wrap;justify-content:center}
+.features{display:flex;gap:16px;max-width:900px;margin:0 auto;padding:30px 20px;flex-wrap:wrap;justify-content:center}
 .feature{background:var(--surface);border:1px solid #1a1a24;border-radius:12px;padding:24px;text-align:center;flex:1;min-width:200px;max-width:280px}
 .feature h3{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:3px;color:var(--accent);margin-bottom:8px}
 .feature p{font-size:13px;color:var(--muted)}
@@ -39,13 +34,6 @@ h1 span{color:var(--accent)}
 .comp-table th{font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:2px;color:var(--accent)}
 .comp-table td:first-child{text-align:left;font-weight:600}
 .check{color:#4ade80}.cross{color:#ef4444}
-.cta{background:var(--surface);border-radius:20px;padding:40px 24px;max-width:420px;margin:0 auto;text-align:center;border:1px solid #1a1a24}
-.cta h2{font-family:'Bebas Neue',sans-serif;font-size:36px;letter-spacing:6px;color:var(--text);margin-bottom:8px}
-.cta .price{font-size:48px;color:var(--accent);font-family:'Bebas Neue',sans-serif;margin:8px 0}
-.download-btn{display:inline-block;background:var(--accent);color:#000;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:4px;padding:14px 40px;border-radius:12px;margin-top:16px;text-decoration:none;box-shadow:0 0 20px rgba(0,212,255,.4);cursor:pointer;animation:glow 2s ease-in-out infinite alternate;transition:transform .2s}
-.download-btn:hover{transform:scale(1.05)}
-.install-note{font-size:12px;color:var(--muted);margin-top:12px;background:rgba(255,255,255,.03);padding:10px;border-radius:8px}
-.install-note b{color:var(--accent)}
 footer{text-align:center;padding:30px 16px;color:var(--muted);font-size:12px;border-top:1px solid #1a1a24;margin-top:40px}
 </style>
 </head>
@@ -54,22 +42,18 @@ footer{text-align:center;padding:30px 16px;color:var(--muted);font-size:12px;bor
 <section class="hero">
 <h1>SIN<span>FON</span></h1>
 <div class="tagline">Recorte de fotos con IA</div>
-<div class="free-tag">100% GRATIS</div>
-<div class="btn-group">
-<a href="#cloud" class="btn-cloud">SINFON CLOUD</a>
-<a href="#download" class="btn-download">DESCARGAR PC</a>
-</div>
+<div class="free-tag">100% GRATIS — SIN REGISTRO</div>
 </section>
 
 <div class="features">
-<div class="feature"><h3>SIN INTERNET</h3><p>La IA corre en tu dispositivo. Tus fotos nunca salen de tu computadora.</p></div>
-<div class="feature"><h3>CALIDAD PROFESIONAL</h3><p>Elimina fondos de personas con un solo clic.</p></div>
-<div class="feature"><h3>PARA SIEMPRE</h3><p>Sin suscripciones. Sin renovaciones. Sin limites.</p></div>
+<div class="feature"><h3>CELULAR Y PC</h3><p>Usalo desde cualquier dispositivo con navegador. Sin descargar nada.</p></div>
+<div class="feature"><h3>CALIDAD IA</h3><p>Motor InSPyReNet para recortes precisos con transparencia real.</p></div>
+<div class="feature"><h3>PARA SIEMPRE</h3><p>Sin suscripciones. Sin limites. Sin marcas de agua.</p></div>
 </div>
 
 <section class="cloud-section" id="cloud">
-<div class="cloud-title">SINFON CLOUD</div>
-<div class="cloud-sub">Usa SINFON desde tu celular — sin descargar nada</div>
+<div class="cloud-title">PRUEBA SINFON</div>
+<div class="cloud-sub">Selecciona una foto y quita el fondo al instante</div>
 
 <div class="space-frame">
 <iframe src="https://neural-architect-dev-sinfon.hf.space" allow="camera" scrolling="auto"></iframe>
@@ -80,29 +64,14 @@ footer{text-align:center;padding:30px 16px;color:var(--muted);font-size:12px;bor
 <div class="comp-title">COMPARACION</div>
 <table class="comp-table">
 <tr><th></th><th>SINFON</th><th>remove.bg</th><th>Photoshop</th></tr>
-<tr><td>Sin internet</td><td class="check">&#10003;</td><td class="cross">&#10007;</td><td class="check">&#10003;</td></tr>
 <tr><td>Gratis</td><td class="check">&#10003;</td><td class="cross">$0.20/foto</td><td class="cross">$20/mes</td></tr>
-<tr><td>Privacidad total</td><td class="check">&#10003;</td><td class="cross">&#10007;</td><td class="check">&#10003;</td></tr>
+<tr><td>Sin registro</td><td class="check">&#10003;</td><td class="cross">&#10007;</td><td class="cross">&#10007;</td></tr>
+<tr><td>Sin marca de agua</td><td class="check">&#10003;</td><td class="cross">&#10007;</td><td class="check">&#10003;</td></tr>
 <tr><td>Fotos ilimitadas</td><td class="check">&#10003;</td><td class="cross">&#10007;</td><td class="check">&#10003;</td></tr>
-<tr><td>Facil de usar</td><td class="check">&#10003;</td><td class="check">&#10003;</td><td class="cross">&#10007;</td></tr>
+<tr><td>Fondo transparente</td><td class="check">&#10003;</td><td class="check">&#10003;</td><td class="check">&#10003;</td></tr>
 </table>
 </div>
 
-<section class="cta" id="download">
-<h2>SINFON v1.0.0</h2>
-<p style="color:var(--muted);font-size:14px">Recorte de fotos con IA para Windows</p>
-<div class="price">GRATIS</div>
-<p style="font-size:13px;color:var(--accent)">Para siempre — Sin registro — Sin limites</p>
-<a href="https://drive.google.com/uc?export=download&id=1lOmloGyTZZXdbkw25wrEgrSEFnhzZA_l" target="_blank" class="download-btn">DESCARGAR SINFON</a>
-<div class="install-note">
-<b>Como instalar:</b><br>
-1. Descarga el archivo ZIP<br>
-2. Clic derecho &rarr; Extraer todo<br>
-3. Abre la carpeta &rarr; doble clic en <b>SINFON Setup 1.0.0.exe</b><br>
-4. Si Windows bloquea &rarr; <b>Mas informacion &rarr; Ejecutar de todas formas</b>
-</div>
-</section>
-
-<footer>SINFON &mdash; Hecho en Cuba &mdash; IA que corre en tu dispositivo</footer>
+<footer>SINFON &mdash; Hecho en Cuba &mdash; IA que corre en la nube</footer>
 </body>
 </html>
